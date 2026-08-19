@@ -6,6 +6,7 @@ async function login(page: Page) {
   await page.locator('input[name="password"]').fill("admin-password");
   await page.getByRole("button", { name: /התחבר/i }).click();
   await expect(page).toHaveURL(/\/he\/?$/);
+  await expect(page.getByRole("heading", { name: /דשבורד|Dashboard/i })).toBeVisible();
 }
 
 function localInput(date: Date) {
@@ -38,6 +39,7 @@ test("overlapping vacancy is rejected and a vacancy can be occupied", async ({
   await page.getByTestId("draft-start").fill(localInput(slot.start));
   await page.getByTestId("draft-end").fill(localInput(slot.end));
   await page.getByTestId("create-booking").click();
+  await expect(page.getByTestId("booking-panel")).toBeVisible();
   await expect(page.locator(".fc-kind-vacancy").first()).toBeVisible({
     timeout: 10_000,
   });
