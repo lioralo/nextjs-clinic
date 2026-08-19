@@ -1,27 +1,11 @@
-import dynamic from "next/dynamic";
-
 import { createAppointmentFormAction } from "@/app/[locale]/calendar/actions";
+import { ClinicCalendarLoader } from "@/components/calendar/clinic-calendar-loader";
 import {
   listAppointmentsInRange,
   toCalendarEvent,
 } from "@/lib/appointment-service";
 import { toDatetimeLocalValue } from "@/lib/datetime";
 import { listPatients } from "@/lib/patient-service";
-
-const ClinicCalendar = dynamic(
-  () =>
-    import("@/components/calendar/clinic-calendar").then(
-      (mod) => mod.ClinicCalendar
-    ),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="min-h-[32rem] rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 text-[var(--color-foreground)]/70">
-        Loading calendar...
-      </div>
-    ),
-  }
-);
 
 export default async function CalendarPage({
   params,
@@ -58,7 +42,7 @@ export default async function CalendarPage({
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         <div className="xl:col-span-2 rounded-2xl border bg-[var(--color-surface)] border-[var(--color-border)] p-4 overflow-x-auto">
-          <ClinicCalendar
+          <ClinicCalendarLoader
             locale={locale}
             patients={patients.map((patient) => ({
               id: patient.id,
