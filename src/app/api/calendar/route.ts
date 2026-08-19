@@ -6,6 +6,10 @@ import {
 } from "@/lib/calendar-mutations";
 import { getSessionUserFromRequest } from "@/lib/session";
 
+export async function GET() {
+  return new NextResponse(null, { status: 204 });
+}
+
 export async function POST(req: NextRequest) {
   const formData = await req.formData();
   const locale = String(formData.get("locale") ?? "he");

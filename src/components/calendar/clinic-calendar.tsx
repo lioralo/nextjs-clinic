@@ -118,6 +118,10 @@ export function ClinicCalendar({
   );
 
   useEffect(() => {
+    void fetch("/api/calendar", { method: "GET", credentials: "same-origin" });
+  }, []);
+
+  useEffect(() => {
     if (!formError) return;
     setError(actionMessage(locale, formError));
   }, [formError, locale]);

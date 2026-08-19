@@ -19,6 +19,7 @@ async function openCalendar(page: Page) {
     timeout: 15_000,
   });
   await expect(page.locator(".fc-timegrid")).toBeVisible();
+  await page.request.get("/api/calendar");
 }
 
 function localInput(date: Date) {
