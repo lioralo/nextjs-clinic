@@ -1,60 +1,36 @@
-import { redirect } from "next/navigation";
+import { createPatientAction } from "@/app/[locale]/patients/actions";
+import { t, PATIENT_STATUSES, PATIENT_TYPES, statusLabel, typeLabel } from "@/lib/copy";
 
-import { prisma } from "@/lib/prisma";
-
-export default function NewPatientPage({
+export default async function NewPatientPage({
   params,
 }: {
-  params: { locale: "en" | "he" };
+  params: Promise<{ locale: "en" | "he" }>;
 }) {
-  async function createPatient(formData: FormData) {
-    "use server";
-
-    const firstName = String(formData.get("firstName") ?? "").trim();
-    const lastName = String(formData.get("lastName") ?? "").trim();
-    const phone = String(formData.get("phone") ?? "").trim() || null;
-    const email = String(formData.get("email") ?? "").trim() || null;
-    const notesText =
-      String(formData.get("notesText") ?? "").trim() || null;
-
-    if (!firstName || !lastName) {
-      // For MVP, redirect back. Real apps should surface validation errors.
-      redirect(`/${params.locale}/patients/new`);
-    }
-
-    await prisma.patient.create({
-      data: {
-        firstName,
-        lastName,
-        phone,
-        email,
-        notesText,
-      },
-    });
-
-    redirect(`/${params.locale}/patients`);
-  }
+  const { locale } = await params;
+  const action = createPatientAction.bind(null, locale);
 
   return (
     <div className="max-w-3xl">
       <div className="mb-4">
         <h1 className="text-2xl font-semibold mb-1">
-          {params.locale === "he" ? "מטופל חדש" : "New patient"}
+          {t(locale, "New patient", "מטופל חדש")}
         </h1>
         <p className="text-[var(--color-foreground)]/70">
-          {params.locale === "he"
-            ? "יצירת רשומת מטופל בסיסית"
-            : "Create a basic patient record."}
+          {t(
+            locale,
+            "Create a basic patient record.",
+            "יצירת רשומת מטופל בסיסית"
+          )}
         </p>
       </div>
 
       <form
-        action={createPatient}
+        action={action}
         className="rounded-2xl border bg-[var(--color-surface)] border-[var(--color-border)] p-5 flex flex-col gap-4"
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <label className="flex flex-col gap-1 text-sm">
-            {params.locale === "he" ? "שם פרטי" : "First name"}
+            {t(locale, "First name", "שם פרטי")}
             <input
               name="firstName"
               className="rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"
@@ -62,7 +38,7 @@ export default function NewPatientPage({
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            {params.locale === "he" ? "שם משפחה" : "Last name"}
+            {t(locale, "Last name", "שם משפחה")}
             <input
               name="lastName"
               className="rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"
@@ -73,14 +49,45 @@ export default function NewPatientPage({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <label className="flex flex-col gap-1 text-sm">
-            {params.locale === "he" ? "טלפון" : "Phone"}
+            {t(locale, "Status", "סטטוס")}
+            <select
+              name="status"
+              defaultValue="CANDIDATE"
+              className="rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"
+            >
+              {PATIENT_STATUSES.map((status) => (
+                <option key={status} value={status}>
+                  {statusLabel(locale, status)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            {t(locale, "Patient Type", "סוג מטופל")}
+            <select
+              name="patientType"
+              defaultValue="PRIVATE"
+              className="rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"
+            >
+              {PATIENT_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {typeLabel(locale, type)}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <label className="flex flex-col gap-1 text-sm">
+            {t(locale, "Phone", "טלפון")}
             <input
               name="phone"
               className="rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            {params.locale === "he" ? "אימייל" : "Email"}
+            {t(locale, "Email", "אימייל")}
             <input
               name="email"
               type="email"
@@ -89,8 +96,26 @@ export default function NewPatientPage({
           </label>
         </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <label className="flex flex-col gap-1 text-sm">
+            {t(locale, "Date of Birth", "תאריך לידה")}
+            <input
+              name="birthDate"
+              type="date"
+              className="rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            {t(locale, "ID Number", "מספר תעודת זהות")}
+            <input
+              name="idNumber"
+              className="rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"
+            />
+          </label>
+        </div>
+
         <label className="flex flex-col gap-1 text-sm">
-          {params.locale === "he" ? "הערות" : "Notes"}
+          {t(locale, "Notes", "הערות")}
           <textarea
             name="notesText"
             className="min-h-28 rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"
@@ -102,18 +127,16 @@ export default function NewPatientPage({
             type="submit"
             className="rounded-xl bg-[var(--color-primary)] text-[var(--color-surface)] py-2 px-4 font-semibold hover:opacity-90"
           >
-            {params.locale === "he" ? "שמור" : "Save"}
+            {t(locale, "Save", "שמור")}
           </button>
-
           <a
-            href={`/${params.locale}/patients`}
+            href={`/${locale}/patients`}
             className="rounded-xl border border-[var(--color-border)] px-4 py-2"
           >
-            {params.locale === "he" ? "ביטול" : "Cancel"}
+            {t(locale, "Cancel", "ביטול")}
           </a>
         </div>
       </form>
     </div>
   );
 }
-

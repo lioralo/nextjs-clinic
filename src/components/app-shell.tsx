@@ -26,19 +26,19 @@ export default function AppShell({
                 className="rounded-xl px-3 py-2 hover:bg-[var(--color-primary-container)] hover:text-[var(--color-primary)]"
                 href={`/${locale}`}
               >
-                Dashboard
+                {locale === "he" ? "לוח בקרה" : "Dashboard"}
               </Link>
               <Link
                 className="rounded-xl px-3 py-2 hover:bg-[var(--color-primary-container)] hover:text-[var(--color-primary)]"
                 href={`/${locale}/patients`}
               >
-                Patients
+                {locale === "he" ? "מטופלים" : "Patients"}
               </Link>
               <Link
                 className="rounded-xl px-3 py-2 hover:bg-[var(--color-primary-container)] hover:text-[var(--color-primary)]"
                 href={`/${locale}/calendar`}
               >
-                Calendar
+                {locale === "he" ? "יומן" : "Calendar"}
               </Link>
             </nav>
           </div>
