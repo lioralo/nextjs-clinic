@@ -6,10 +6,13 @@ export default defineConfig({
   testDir: "./e2e",
   retries: 0,
   timeout: 60_000,
+  reporter: [["list"], ["html", { open: "never" }]],
 
   use: {
     baseURL: nextBaseURL,
-    trace: "on-first-retry",
+    screenshot: "on",
+    video: "on",
+    trace: "retain-on-failure",
     ...devices["Desktop Chrome"],
   },
 
