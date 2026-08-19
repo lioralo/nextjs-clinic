@@ -10,7 +10,11 @@ export default async function DashboardPage({
 
   const patientCount = await prisma.patient.count();
   const upcoming = await prisma.appointment.findMany({
-    where: { startAt: { gte: new Date() } },
+    where: {
+      startAt: { gte: new Date() },
+      kind: "APPOINTMENT",
+      status: { not: "CANCELLED" },
+    },
     orderBy: { startAt: "asc" },
     take: 5,
     include: { patient: true },
@@ -56,7 +60,10 @@ export default async function DashboardPage({
                 className="rounded-xl bg-[var(--color-primary-container)]/40 border border-[var(--color-border)] p-3"
               >
                 <div className="font-medium">
-                  {a.patient.firstName} {a.patient.lastName}
+                  {a.patient
+                    ? `${a.patient.firstName} ${a.patient.lastName}`
+                    : a.title?.trim() ||
+                      (locale === "he" ? "פגישה" : "Appointment")}
                 </div>
                 <div className="text-sm text-[var(--color-foreground)]/70">
                   {a.startAt.toLocaleString()}
