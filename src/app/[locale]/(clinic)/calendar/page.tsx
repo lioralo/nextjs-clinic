@@ -9,10 +9,13 @@ import { listPatients } from "@/lib/patient-service";
 
 export default async function CalendarPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: "en" | "he" }>;
+  searchParams: Promise<{ error?: string; bookLink?: string }>;
 }) {
   const { locale } = await params;
+  const query = await searchParams;
 
   const now = new Date();
   const rangeStart = new Date(now);
@@ -38,10 +41,11 @@ export default async function CalendarPage({
         )}
       </p>
 
-      <PublicBookingLinkButton locale={locale} />
+      <PublicBookingLinkButton locale={locale} bookLink={query.bookLink} />
 
       <ClinicCalendarLoader
         locale={locale}
+        formError={query.error ?? null}
         patients={patients.map((patient) => ({
           id: patient.id,
           firstName: patient.firstName,

@@ -28,6 +28,7 @@ import {
   moveAppointment,
   parseAppointmentRange,
   parseEventId,
+  occupyVacancy,
   parseSeriesId,
   rangesOverlap,
   splitPersonName,
@@ -359,5 +360,113 @@ describe("appointment-service", () => {
     expect(prisma.appointment.delete).toHaveBeenCalledWith({
       where: { id: "a1" },
     });
+  });
+
+  it("occupyVacancy rejects a missing or non-vacancy slot", async () => {
+    (prisma.appointment.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(
+      null
+    );
+    await expect(
+      occupyVacancy({
+        vacancyEventId: "missing",
+        patientId: "p1",
+        providerId: "u1",
+      })
+    ).resolves.toEqual({ ok: false, error: "invalid" });
+
+    (prisma.appointment.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(
+      {
+        ...series({ id: "a1", kind: "APPOINTMENT" }),
+        exceptions: [],
+      }
+    );
+    await expect(
+      occupyVacancy({
+        vacancyEventId: "a1",
+        patientId: "p1",
+        providerId: "u1",
+      })
+    ).resolves.toEqual({ ok: false, error: "invalid" });
+  });
+
+  it("occupyVacancy books a listed one-time vacancy and rejects conflicts", async () => {
+    (prisma.appointment.delete as ReturnType<typeof vi.fn>).mockClear();
+    (prisma.appointment.create as ReturnType<typeof vi.fn>).mockClear();
+    const startAt = new Date("2026-08-20T10:00:00.000Z");
+    const endAt = new Date("2026-08-20T11:00:00.000Z");
+    const vacancy = {
+      ...series({
+        id: "v1",
+        patientId: null,
+        patient: null,
+        kind: "VACANCY",
+        title: "Open",
+        startAt,
+        endAt,
+      }),
+      exceptions: [],
+    };
+
+    (prisma.appointment.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(
+      vacancy
+    );
+    (prisma.appointment.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
+      {
+        ...series({
+          id: "busy",
+          startAt,
+          endAt,
+        }),
+        exceptions: [],
+      },
+    ]);
+
+    await expect(
+      occupyVacancy({
+        vacancyEventId: "v1",
+        patientId: "p1",
+        providerId: "u1",
+      })
+    ).resolves.toEqual({ ok: false, error: "conflict" });
+    expect(prisma.appointment.delete).not.toHaveBeenCalled();
+
+    (prisma.appointment.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
+      vacancy,
+    ]);
+    (prisma.appointment.delete as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: "v1",
+    });
+    (prisma.appointment.create as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: "booked",
+    });
+
+    await expect(
+      occupyVacancy({
+        vacancyEventId: "v1",
+        patientId: "p1",
+        providerId: "u1",
+      })
+    ).resolves.toEqual({ ok: true, id: "booked" });
+    expect(prisma.appointment.delete).toHaveBeenCalledWith({
+      where: { id: "v1" },
+    });
+  });
+
+  it("toCalendarEvent public ids stay seriesId__iso for recurring vacancies", () => {
+    const startAt = new Date("2026-08-19T09:00:00.000Z");
+    const event = toCalendarEvent(
+      series({
+        id: "v1",
+        patientId: null,
+        patient: null,
+        kind: "VACANCY",
+        title: "Open hour",
+        isRecurring: true,
+        startAt,
+        originalStartAt: startAt,
+      })
+    );
+    expect(event.id).toBe(`v1__${startAt.toISOString()}`);
+    expect(event.kind).toBe("VACANCY");
   });
 });

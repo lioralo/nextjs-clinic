@@ -7,16 +7,9 @@ import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import {
-  createAppointmentRecord,
-  deleteAppointmentAction,
-  occupyVacancyAction,
-  updateAppointmentDetailsAction,
-  updateAppointmentTimesAction,
-  type RecurrenceScope,
-} from "@/app/[locale]/(clinic)/calendar/actions";
+import type { RecurrenceScope } from "@/lib/calendar-mutations";
 import type {
   CalendarEventDTO,
   PatientOptionDTO,
@@ -29,6 +22,7 @@ type Props = {
   locale: AppLocale;
   patients: PatientOptionDTO[];
   appointments: CalendarEventDTO[];
+  formError?: string | null;
 };
 
 type Draft = {
@@ -82,6 +76,9 @@ function actionMessage(locale: AppLocale, error: string | undefined) {
       "הזמן חופף לפגישה, זמינות או חסימה אחרת."
     );
   }
+  if (error === "unauthorized") {
+    return t(locale, "Please sign in again.", "יש להתחבר מחדש.");
+  }
   return t(locale, "Booking failed.", "הקביעה נכשלה.");
 }
 
@@ -100,7 +97,12 @@ function askScope(
   return thisOnly ? "this" : "series";
 }
 
-export function ClinicCalendar({ locale, patients, appointments }: Props) {
+export function ClinicCalendar({
+  locale,
+  patients,
+  appointments,
+  formError,
+}: Props) {
   const router = useRouter();
   const [draft, setDraft] = useState<Draft>(() => emptyDraft(patients));
   const [selected, setSelected] = useState<SelectedEvent | null>(null);
@@ -111,8 +113,14 @@ export function ClinicCalendar({ locale, patients, appointments }: Props) {
   );
   const [editMeetingLink, setEditMeetingLink] = useState("");
   const [occupyPatientId, setOccupyPatientId] = useState(patients[0]?.id ?? "");
-  const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(
+    formError ? actionMessage(locale, formError) : null
+  );
+
+  useEffect(() => {
+    if (!formError) return;
+    setError(actionMessage(locale, formError));
+  }, [formError, locale]);
 
   useEffect(() => {
     if (!selected) return;
@@ -157,101 +165,28 @@ export function ClinicCalendar({ locale, patients, appointments }: Props) {
       revert();
       return;
     }
-    const result = await updateAppointmentTimesAction(
-      id,
-      start.toISOString(),
-      end.toISOString(),
-      scope
-    );
+    const body = new FormData();
+    body.set("intent", "move");
+    body.set("ajax", "1");
+    body.set("locale", locale);
+    body.set("appointmentId", id);
+    body.set("startAt", start.toISOString());
+    body.set("endAt", end.toISOString());
+    body.set("scope", scope);
+    const response = await fetch("/api/calendar", {
+      method: "POST",
+      body,
+      credentials: "same-origin",
+    });
+    const result = (await response.json()) as {
+      ok: boolean;
+      error?: string;
+    };
     if (!result.ok) {
       revert();
       setError(actionMessage(locale, result.error));
       return;
     }
-    router.refresh();
-  }
-
-  async function onCreate(e: FormEvent) {
-    e.preventDefault();
-    if (draft.kind === "APPOINTMENT" && !draft.patientId) return;
-    setSaving(true);
-    setError(null);
-    const result = await createAppointmentRecord({
-      kind: draft.kind,
-      patientId: draft.patientId,
-      startAt: draft.startAt,
-      endAt: draft.endAt,
-      title: draft.title,
-      meetingType: draft.meetingType,
-      meetingLink: draft.meetingLink,
-      isRecurring: draft.isRecurring,
-      recurrenceEndDate: draft.recurrenceEndDate,
-      locale,
-    });
-    setSaving(false);
-    if (!result.ok) {
-      setError(actionMessage(locale, result.error));
-      return;
-    }
-    setSelected(null);
-    router.refresh();
-  }
-
-  async function onSave(scope: RecurrenceScope) {
-    if (!selected) return;
-    setSaving(true);
-    setError(null);
-    const result = await updateAppointmentDetailsAction({
-      appointmentId: selected.id,
-      startAt: editStart,
-      endAt: editEnd,
-      meetingType: editMeetingType,
-      meetingLink: editMeetingLink,
-      scope,
-    });
-    setSaving(false);
-    if (!result.ok) {
-      setError(actionMessage(locale, result.error));
-      return;
-    }
-    setSelected(null);
-    router.refresh();
-  }
-
-  async function onDelete(scope: RecurrenceScope) {
-    if (!selected) return;
-    const confirmed = window.confirm(
-      scope === "this"
-        ? t(locale, "Delete this meeting?", "למחוק את הפגישה הזו?")
-        : t(locale, "Delete entire series?", "למחוק את כל הסדרה?")
-    );
-    if (!confirmed) return;
-    setSaving(true);
-    const result = await deleteAppointmentAction(selected.id, scope);
-    setSaving(false);
-    if (!result.ok) {
-      setError(t(locale, "Could not delete meeting.", "לא ניתן למחוק את הפגישה."));
-      return;
-    }
-    setSelected(null);
-    router.refresh();
-  }
-
-  async function onOccupy() {
-    if (!selected || !occupyPatientId) return;
-    setSaving(true);
-    setError(null);
-    const result = await occupyVacancyAction({
-      vacancyEventId: selected.id,
-      patientId: occupyPatientId,
-      locale,
-    });
-    setSaving(false);
-    if (!result.ok) {
-      setError(actionMessage(locale, result.error));
-      return;
-    }
-    setSelected(null);
     router.refresh();
   }
 
@@ -390,36 +325,45 @@ export function ClinicCalendar({ locale, patients, appointments }: Props) {
             </p>
 
             {selected.kind === "VACANCY" ? (
-              <label className="flex flex-col gap-1 text-sm">
-                {t(locale, "Book this vacancy for", "קבע זמינות זו עבור")}
-                <select
-                  data-testid="occupy-patient"
-                  value={occupyPatientId}
-                  onChange={(e) => setOccupyPatientId(e.target.value)}
-                  className="rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"
-                >
-                  {patients.map((patient) => (
-                    <option key={patient.id} value={patient.id}>
-                      {patient.firstName} {patient.lastName}
-                    </option>
-                  ))}
-                </select>
+              <form method="post" action="/api/calendar" className="flex flex-col gap-3">
+                <input type="hidden" name="intent" value="occupy" />
+                <input type="hidden" name="locale" value={locale} />
+                <input type="hidden" name="vacancyEventId" value={selected.id} />
+                <label className="flex flex-col gap-1 text-sm">
+                  {t(locale, "Book this vacancy for", "קבע זמינות זו עבור")}
+                  <select
+                    name="patientId"
+                    data-testid="occupy-patient"
+                    value={occupyPatientId}
+                    onChange={(e) => setOccupyPatientId(e.target.value)}
+                    className="rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"
+                  >
+                    {patients.map((patient) => (
+                      <option key={patient.id} value={patient.id}>
+                        {patient.firstName} {patient.lastName}
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 <button
-                  type="button"
+                  type="submit"
                   data-testid="occupy-vacancy"
-                  onClick={() => void onOccupy()}
-                  disabled={saving || patients.length === 0}
+                  disabled={patients.length === 0}
                   className="rounded-xl bg-[var(--color-primary)] text-[var(--color-surface)] px-4 py-2 font-semibold disabled:opacity-60"
                 >
                   {t(locale, "Occupy slot", "תפוס משבצת")}
                 </button>
-              </label>
+              </form>
             ) : (
-              <>
+              <form method="post" action="/api/calendar" className="flex flex-col gap-3">
+                <input type="hidden" name="intent" value="save" />
+                <input type="hidden" name="locale" value={locale} />
+                <input type="hidden" name="appointmentId" value={selected.id} />
                 <label className="flex flex-col gap-1 text-sm">
                   {t(locale, "Start Time", "שעת התחלה")}
                   <input
                     type="datetime-local"
+                    name="startAt"
                     value={editStart}
                     onChange={(e) => setEditStart(e.target.value)}
                     className="rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"
@@ -429,6 +373,7 @@ export function ClinicCalendar({ locale, patients, appointments }: Props) {
                   {t(locale, "End Time", "שעת סיום")}
                   <input
                     type="datetime-local"
+                    name="endAt"
                     value={editEnd}
                     onChange={(e) => setEditEnd(e.target.value)}
                     className="rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"
@@ -438,6 +383,7 @@ export function ClinicCalendar({ locale, patients, appointments }: Props) {
                   <label className="flex flex-col gap-1 text-sm">
                     {t(locale, "Meeting Type", "סוג פגישה")}
                     <select
+                      name="meetingType"
                       value={editMeetingType}
                       onChange={(e) =>
                         setEditMeetingType(
@@ -455,37 +401,38 @@ export function ClinicCalendar({ locale, patients, appointments }: Props) {
                     </select>
                   </label>
                 ) : null}
+                <input type="hidden" name="meetingLink" value={editMeetingLink} />
                 {selected.isRecurring ? (
                   <div className="flex flex-col gap-2">
                     <button
-                      type="button"
+                      type="submit"
+                      name="scope"
+                      value="this"
                       data-testid="save-this-occurrence"
-                      onClick={() => void onSave("this")}
-                      disabled={saving}
-                      className="rounded-xl bg-[var(--color-primary)] text-[var(--color-surface)] px-4 py-2 font-semibold disabled:opacity-60"
+                      className="rounded-xl bg-[var(--color-primary)] text-[var(--color-surface)] px-4 py-2 font-semibold"
                     >
                       {t(locale, "Save this meeting", "שמור פגישה זו")}
                     </button>
                     <button
-                      type="button"
-                      onClick={() => void onSave("series")}
-                      disabled={saving}
-                      className="rounded-xl border border-[var(--color-border)] px-4 py-2 disabled:opacity-60"
+                      type="submit"
+                      name="scope"
+                      value="series"
+                      className="rounded-xl border border-[var(--color-border)] px-4 py-2"
                     >
                       {t(locale, "Save entire series", "שמור את כל הסדרה")}
                     </button>
                   </div>
                 ) : (
                   <button
-                    type="button"
-                    onClick={() => void onSave("series")}
-                    disabled={saving}
-                    className="rounded-xl bg-[var(--color-primary)] text-[var(--color-surface)] px-4 py-2 font-semibold disabled:opacity-60"
+                    type="submit"
+                    name="scope"
+                    value="series"
+                    className="rounded-xl bg-[var(--color-primary)] text-[var(--color-surface)] px-4 py-2 font-semibold"
                   >
                     {t(locale, "Save changes", "שמור שינויים")}
                   </button>
                 )}
-              </>
+              </form>
             )}
 
             <div className="flex flex-col gap-2">
@@ -499,33 +446,81 @@ export function ClinicCalendar({ locale, patients, appointments }: Props) {
               ) : null}
               {selected.isRecurring ? (
                 <>
-                  <button
-                    type="button"
-                    data-testid="delete-this-occurrence"
-                    onClick={() => void onDelete("this")}
-                    disabled={saving}
-                    className="rounded-xl border border-[var(--color-border)] px-4 py-2 disabled:opacity-60"
+                  <form
+                    method="post"
+                    action="/api/calendar"
+                    onSubmit={(event) => {
+                      if (
+                        !window.confirm(
+                          t(locale, "Delete this meeting?", "למחוק את הפגישה הזו?")
+                        )
+                      ) {
+                        event.preventDefault();
+                      }
+                    }}
                   >
-                    {t(locale, "Delete this meeting", "מחק פגישה זו")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void onDelete("series")}
-                    disabled={saving}
-                    className="rounded-xl border border-[var(--color-border)] px-4 py-2 disabled:opacity-60"
+                    <input type="hidden" name="intent" value="delete" />
+                    <input type="hidden" name="locale" value={locale} />
+                    <input type="hidden" name="appointmentId" value={selected.id} />
+                    <input type="hidden" name="scope" value="this" />
+                    <button
+                      type="submit"
+                      data-testid="delete-this-occurrence"
+                      className="w-full rounded-xl border border-[var(--color-border)] px-4 py-2"
+                    >
+                      {t(locale, "Delete this meeting", "מחק פגישה זו")}
+                    </button>
+                  </form>
+                  <form
+                    method="post"
+                    action="/api/calendar"
+                    onSubmit={(event) => {
+                      if (
+                        !window.confirm(
+                          t(locale, "Delete entire series?", "למחוק את כל הסדרה?")
+                        )
+                      ) {
+                        event.preventDefault();
+                      }
+                    }}
                   >
-                    {t(locale, "Delete entire series", "מחק את כל הסדרה")}
-                  </button>
+                    <input type="hidden" name="intent" value="delete" />
+                    <input type="hidden" name="locale" value={locale} />
+                    <input type="hidden" name="appointmentId" value={selected.id} />
+                    <input type="hidden" name="scope" value="series" />
+                    <button
+                      type="submit"
+                      className="w-full rounded-xl border border-[var(--color-border)] px-4 py-2"
+                    >
+                      {t(locale, "Delete entire series", "מחק את כל הסדרה")}
+                    </button>
+                  </form>
                 </>
               ) : (
-                <button
-                  type="button"
-                  onClick={() => void onDelete("series")}
-                  disabled={saving}
-                  className="rounded-xl border border-[var(--color-border)] px-4 py-2 disabled:opacity-60"
+                <form
+                  method="post"
+                  action="/api/calendar"
+                  onSubmit={(event) => {
+                    if (
+                      !window.confirm(
+                        t(locale, "Delete Meeting?", "למחוק פגישה?")
+                      )
+                    ) {
+                      event.preventDefault();
+                    }
+                  }}
                 >
-                  {t(locale, "Delete Meeting", "מחק פגישה")}
-                </button>
+                  <input type="hidden" name="intent" value="delete" />
+                  <input type="hidden" name="locale" value={locale} />
+                  <input type="hidden" name="appointmentId" value={selected.id} />
+                  <input type="hidden" name="scope" value="series" />
+                  <button
+                    type="submit"
+                    className="w-full rounded-xl border border-[var(--color-border)] px-4 py-2"
+                  >
+                    {t(locale, "Delete Meeting", "מחק פגישה")}
+                  </button>
+                </form>
               )}
               <button
                 type="button"
@@ -537,7 +532,13 @@ export function ClinicCalendar({ locale, patients, appointments }: Props) {
             </div>
           </div>
         ) : (
-          <form onSubmit={onCreate} className="flex flex-col gap-3">
+          <form
+            method="post"
+            action="/api/calendar"
+            className="flex flex-col gap-3"
+          >
+            <input type="hidden" name="intent" value="create" />
+            <input type="hidden" name="locale" value={locale} />
             <h2 className="text-lg font-semibold">
               {t(locale, "Booking Panel", "לוח קביעות")}
             </h2>
@@ -551,6 +552,7 @@ export function ClinicCalendar({ locale, patients, appointments }: Props) {
             <label className="flex flex-col gap-1 text-sm">
               {t(locale, "Calendar Action", "פעולת יומן")}
               <select
+                name="kind"
                 value={draft.kind}
                 onChange={(e) =>
                   setDraft((current) => ({
@@ -574,6 +576,7 @@ export function ClinicCalendar({ locale, patients, appointments }: Props) {
               <label className="flex flex-col gap-1 text-sm">
                 {t(locale, "Patient", "מטופל")}
                 <select
+                  name="patientId"
                   required
                   value={draft.patientId}
                   onChange={(e) => {
@@ -616,6 +619,8 @@ export function ClinicCalendar({ locale, patients, appointments }: Props) {
               <label className="flex flex-col gap-1 text-sm">
                 {t(locale, "Title", "כותרת")}
                 <input
+                  name="title"
+                  data-testid="draft-title"
                   value={draft.title}
                   onChange={(e) =>
                     setDraft((current) => ({ ...current, title: e.target.value }))
@@ -629,6 +634,7 @@ export function ClinicCalendar({ locale, patients, appointments }: Props) {
               {t(locale, "Start Time", "שעת התחלה")}
               <input
                 type="datetime-local"
+                name="startAt"
                 required
                 data-testid="draft-start"
                 value={draft.startAt}
@@ -642,6 +648,7 @@ export function ClinicCalendar({ locale, patients, appointments }: Props) {
               {t(locale, "End Time", "שעת סיום")}
               <input
                 type="datetime-local"
+                name="endAt"
                 required
                 data-testid="draft-end"
                 value={draft.endAt}
@@ -656,6 +663,7 @@ export function ClinicCalendar({ locale, patients, appointments }: Props) {
               <label className="flex flex-col gap-1 text-sm">
                 {t(locale, "Meeting Type", "סוג פגישה")}
                 <select
+                  name="meetingType"
                   value={draft.meetingType}
                   onChange={(e) =>
                     setDraft((current) => ({
@@ -678,6 +686,7 @@ export function ClinicCalendar({ locale, patients, appointments }: Props) {
                 {t(locale, "Meeting Link", "קישור לפגישה")}
                 <input
                   type="url"
+                  name="meetingLink"
                   value={draft.meetingLink}
                   onChange={(e) =>
                     setDraft((current) => ({
@@ -693,6 +702,8 @@ export function ClinicCalendar({ locale, patients, appointments }: Props) {
             <label className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
+                name="isRecurring"
+                value="1"
                 checked={draft.isRecurring}
                 onChange={(e) =>
                   setDraft((current) => ({
@@ -709,6 +720,7 @@ export function ClinicCalendar({ locale, patients, appointments }: Props) {
                 {t(locale, "Repeat Until", "חזור עד")}
                 <input
                   type="date"
+                  name="recurrenceEndDate"
                   value={draft.recurrenceEndDate}
                   onChange={(e) =>
                     setDraft((current) => ({
@@ -724,7 +736,7 @@ export function ClinicCalendar({ locale, patients, appointments }: Props) {
             <button
               type="submit"
               data-testid="create-booking"
-              disabled={saving || (draft.kind === "APPOINTMENT" && patients.length === 0)}
+              disabled={draft.kind === "APPOINTMENT" && patients.length === 0}
               className="rounded-xl bg-[var(--color-primary)] text-[var(--color-surface)] py-2 px-3 font-semibold hover:opacity-90 disabled:opacity-60"
             >
               {draft.kind === "VACANCY"

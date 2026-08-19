@@ -1,7 +1,4 @@
-"use server";
-
 import type { AppointmentKind, MeetingType } from "@prisma/client";
-import { redirect } from "next/navigation";
 
 import {
   createAppointment,
@@ -16,29 +13,28 @@ import {
 } from "@/lib/appointment-service";
 import { parseDateInput } from "@/lib/datetime";
 import { normalizeLocale } from "@/lib/locale";
+import { prisma } from "@/lib/prisma";
 import { ensurePublicBookingLink } from "@/lib/public-booking-service";
 import { revalidateClinic } from "@/lib/revalidate";
-import { getSessionUser } from "@/lib/session";
-import { prisma } from "@/lib/prisma";
-
-export type AppointmentActionResult =
-  | { ok: true; id?: string; token?: string }
-  | { ok: false; error: string };
 
 export type RecurrenceScope = "this" | "series";
 
-export type CalendarBookingInput = {
-  kind?: AppointmentKind | string;
-  patientId?: string;
-  startAt: string;
-  endAt: string;
-  title?: string;
-  meetingType?: MeetingType | string;
-  meetingLink?: string;
-  isRecurring?: boolean;
-  recurrenceEndDate?: string;
-  locale?: string;
-};
+export type CalendarMutationResult =
+  | { ok: true; id?: string; token?: string }
+  | { ok: false; error: string };
+
+export function calendarPath(
+  locale: string,
+  query?: Record<string, string | undefined>
+) {
+  const loc = normalizeLocale(locale) ?? "he";
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query ?? {})) {
+    if (value) params.set(key, value);
+  }
+  const suffix = params.toString();
+  return `/${loc}/calendar${suffix ? `?${suffix}` : ""}`;
+}
 
 function parseKind(value: string | undefined): AppointmentKind {
   if (value === "VACANCY" || value === "BLOCK" || value === "APPOINTMENT") {
@@ -51,39 +47,24 @@ function parseMeetingType(value: string | undefined): MeetingType {
   return value === "ONLINE" ? "ONLINE" : "IN_PERSON";
 }
 
-async function requireUserId(locale: string): Promise<string> {
-  const user = await getSessionUser();
-  if (!user) {
-    redirect(`/${normalizeLocale(locale) ?? "he"}/login`);
-  }
-  return user.id;
-}
-
-export async function createAppointmentFormAction(formData: FormData) {
-  const locale = String(formData.get("locale") ?? "he");
-  const result = await createAppointmentRecord({
-    kind: String(formData.get("kind") ?? "APPOINTMENT"),
-    patientId: String(formData.get("patientId") ?? ""),
-    startAt: String(formData.get("startAt") ?? ""),
-    endAt: String(formData.get("endAt") ?? ""),
-    title: String(formData.get("title") ?? ""),
-    meetingType: String(formData.get("meetingType") ?? "IN_PERSON"),
-    meetingLink: String(formData.get("meetingLink") ?? ""),
-    isRecurring: String(formData.get("isRecurring") ?? "") === "1",
-    recurrenceEndDate: String(formData.get("recurrenceEndDate") ?? ""),
-    locale,
-  });
-
-  if (result.ok) {
-    redirect(`/${normalizeLocale(locale) ?? "he"}/calendar`);
-  }
+function parseScope(value: string | undefined): RecurrenceScope {
+  return value === "this" ? "this" : "series";
 }
 
 export async function createAppointmentRecord(
-  input: CalendarBookingInput
-): Promise<AppointmentActionResult> {
-  const locale = input.locale ?? "he";
-  const userId = await requireUserId(locale);
+  userId: string,
+  input: {
+    kind?: string;
+    patientId?: string;
+    startAt: string;
+    endAt: string;
+    title?: string;
+    meetingType?: string;
+    meetingLink?: string;
+    isRecurring?: boolean;
+    recurrenceEndDate?: string;
+  }
+): Promise<CalendarMutationResult> {
   const range = parseAppointmentRange(input.startAt, input.endAt);
   const kind = parseKind(input.kind);
 
@@ -119,17 +100,12 @@ export async function createAppointmentRecord(
   return { ok: true, id: created.id };
 }
 
-export async function updateAppointmentTimesAction(
+export async function updateAppointmentTimesRecord(
   appointmentId: string,
   startAt: string,
   endAt: string,
   scope: RecurrenceScope = "series"
-): Promise<AppointmentActionResult> {
-  const user = await getSessionUser();
-  if (!user) {
-    return { ok: false, error: "unauthorized" };
-  }
-
+): Promise<CalendarMutationResult> {
   const range = parseAppointmentRange(startAt, endAt);
   const parsed = parseEventId(appointmentId);
   if (!parsed.seriesId || !range) {
@@ -170,15 +146,15 @@ export async function updateAppointmentTimesAction(
   return { ok: true, id: existing.id };
 }
 
-export async function updateAppointmentDetailsAction(input: {
+export async function updateAppointmentDetailsRecord(input: {
   appointmentId: string;
   startAt: string;
   endAt: string;
   meetingType?: string;
   meetingLink?: string;
   scope?: RecurrenceScope;
-}): Promise<AppointmentActionResult> {
-  const times = await updateAppointmentTimesAction(
+}): Promise<CalendarMutationResult> {
+  const times = await updateAppointmentTimesRecord(
     input.appointmentId,
     input.startAt,
     input.endAt,
@@ -198,15 +174,10 @@ export async function updateAppointmentDetailsAction(input: {
   return { ok: true, id: seriesId };
 }
 
-export async function deleteAppointmentAction(
+export async function deleteAppointmentRecord(
   appointmentId: string,
   scope: RecurrenceScope = "series"
-): Promise<AppointmentActionResult> {
-  const user = await getSessionUser();
-  if (!user) {
-    return { ok: false, error: "unauthorized" };
-  }
-
+): Promise<CalendarMutationResult> {
   const parsed = parseEventId(appointmentId);
   if (!parsed.seriesId) {
     return { ok: false, error: "invalid" };
@@ -229,13 +200,10 @@ export async function deleteAppointmentAction(
   return { ok: true, id: existing.id };
 }
 
-export async function occupyVacancyAction(input: {
-  vacancyEventId: string;
-  patientId: string;
-  locale?: string;
-}): Promise<AppointmentActionResult> {
-  const locale = input.locale ?? "he";
-  const userId = await requireUserId(locale);
+export async function occupyVacancyRecord(
+  userId: string,
+  input: { vacancyEventId: string; patientId: string }
+): Promise<CalendarMutationResult> {
   if (!input.patientId) {
     return { ok: false, error: "invalid" };
   }
@@ -260,11 +228,60 @@ export async function occupyVacancyAction(input: {
   return { ok: true, id: result.id };
 }
 
-export async function ensurePublicBookingLinkAction(): Promise<AppointmentActionResult> {
-  const user = await getSessionUser();
-  if (!user) {
-    return { ok: false, error: "unauthorized" };
+export async function applyCalendarIntent(
+  userId: string,
+  formData: FormData
+): Promise<CalendarMutationResult> {
+  const intent = String(formData.get("intent") ?? "create");
+
+  if (intent === "public-link") {
+    const link = await ensurePublicBookingLink(userId);
+    return { ok: true, token: link.token };
   }
-  const link = await ensurePublicBookingLink(user.id);
-  return { ok: true, token: link.token };
+
+  if (intent === "occupy") {
+    return occupyVacancyRecord(userId, {
+      vacancyEventId: String(formData.get("vacancyEventId") ?? ""),
+      patientId: String(formData.get("patientId") ?? ""),
+    });
+  }
+
+  if (intent === "delete") {
+    return deleteAppointmentRecord(
+      String(formData.get("appointmentId") ?? ""),
+      parseScope(String(formData.get("scope") ?? "series"))
+    );
+  }
+
+  if (intent === "save") {
+    return updateAppointmentDetailsRecord({
+      appointmentId: String(formData.get("appointmentId") ?? ""),
+      startAt: String(formData.get("startAt") ?? ""),
+      endAt: String(formData.get("endAt") ?? ""),
+      meetingType: String(formData.get("meetingType") ?? "IN_PERSON"),
+      meetingLink: String(formData.get("meetingLink") ?? ""),
+      scope: parseScope(String(formData.get("scope") ?? "series")),
+    });
+  }
+
+  if (intent === "move") {
+    return updateAppointmentTimesRecord(
+      String(formData.get("appointmentId") ?? ""),
+      String(formData.get("startAt") ?? ""),
+      String(formData.get("endAt") ?? ""),
+      parseScope(String(formData.get("scope") ?? "series"))
+    );
+  }
+
+  return createAppointmentRecord(userId, {
+    kind: String(formData.get("kind") ?? "APPOINTMENT"),
+    patientId: String(formData.get("patientId") ?? ""),
+    startAt: String(formData.get("startAt") ?? ""),
+    endAt: String(formData.get("endAt") ?? ""),
+    title: String(formData.get("title") ?? ""),
+    meetingType: String(formData.get("meetingType") ?? "IN_PERSON"),
+    meetingLink: String(formData.get("meetingLink") ?? ""),
+    isRecurring: String(formData.get("isRecurring") ?? "") === "1",
+    recurrenceEndDate: String(formData.get("recurrenceEndDate") ?? ""),
+  });
 }

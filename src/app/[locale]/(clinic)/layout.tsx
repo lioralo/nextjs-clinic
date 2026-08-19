@@ -1,12 +1,14 @@
 import AppShell from "@/components/app-shell";
+import { normalizeLocale } from "@/lib/locale";
 
 export default async function ClinicLayout({
   children,
   params,
 }: {
   children: React.ReactNode;
-  params: Promise<{ locale: "en" | "he" }>;
+  params: Promise<{ locale: string }>;
 }) {
-  const { locale } = await params;
+  const { locale: rawLocale } = await params;
+  const locale = normalizeLocale(rawLocale) ?? "he";
   return <AppShell locale={locale}>{children}</AppShell>;
 }

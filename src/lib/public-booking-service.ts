@@ -84,7 +84,9 @@ export async function bookPublicVacancy(input: {
 
   const parsed = validatePublicBookingInput(input);
   if (!parsed.ok) return parsed;
-  if (parsed.honeypot) return { ok: true as const, honeypot: true };
+  if (parsed.honeypot || !("name" in parsed)) {
+    return { ok: true as const, honeypot: true };
+  }
 
   const link = await getActivePublicBookingLink(input.token);
   if (!link) return { ok: false as const, error: "link" };
@@ -97,7 +99,7 @@ export async function bookPublicVacancy(input: {
     return { ok: false as const, error: "slot" };
   }
 
-  const names = splitPersonName(parsed.name);
+  const names = splitPersonName(parsed.name ?? "");
   const patient = await createPatient({
     firstName: names.firstName,
     lastName: names.lastName,

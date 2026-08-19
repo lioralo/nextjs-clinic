@@ -1,12 +1,24 @@
 import { test, expect, type Page } from "@playwright/test";
 
+import { prisma } from "../src/lib/prisma";
+
 async function login(page: Page) {
   await page.goto("/he/login");
   await page.locator('input[name="username"]').fill("admin");
   await page.locator('input[name="password"]').fill("admin-password");
   await page.getByRole("button", { name: /התחבר/i }).click();
   await expect(page).toHaveURL(/\/he\/?$/);
-  await expect(page.getByRole("heading", { name: /דשבורד|Dashboard/i })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: /דשבורד|Dashboard/i })
+  ).toBeVisible();
+}
+
+async function openCalendar(page: Page) {
+  await page.goto("/he/calendar");
+  await expect(page.getByTestId("clinic-calendar")).toBeVisible({
+    timeout: 15_000,
+  });
+  await expect(page.locator(".fc-timegrid")).toBeVisible();
 }
 
 function localInput(date: Date) {
@@ -16,7 +28,7 @@ function localInput(date: Date) {
   )}:${pad(date.getMinutes())}`;
 }
 
-function clinicSlot(hour: number, dayOffset = 0) {
+function slotOn(dayOffset: number, hour: number) {
   const start = new Date();
   start.setDate(start.getDate() + dayOffset);
   start.setHours(hour, 0, 0, 0);
@@ -24,65 +36,113 @@ function clinicSlot(hour: number, dayOffset = 0) {
   return { start, end };
 }
 
+async function setDraftTimes(page: Page, start: Date, end: Date) {
+  for (const [testId, value] of [
+    ["draft-start", localInput(start)],
+    ["draft-end", localInput(end)],
+  ] as const) {
+    await page.getByTestId(testId).evaluate((el, next) => {
+      const input = el as HTMLInputElement;
+      const descriptor = Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype,
+        "value"
+      );
+      descriptor?.set?.call(input, next);
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    }, value);
+  }
+}
+
+async function fillVacancyDraft(page: Page, title: string, slot: { start: Date; end: Date }) {
+  const panel = page.getByTestId("booking-panel");
+  await panel.locator("select").first().selectOption("VACANCY");
+  await page.getByTestId("draft-title").fill(title);
+  await setDraftTimes(page, slot.start, slot.end);
+}
+
+test.beforeAll(async () => {
+  await prisma.appointment.deleteMany();
+  await prisma.note.deleteMany({
+    where: {
+      patient: {
+        NOT: { AND: [{ firstName: "Test" }, { lastName: "Patient" }] },
+      },
+    },
+  });
+  await prisma.patient.deleteMany({
+    where: {
+      NOT: { AND: [{ firstName: "Test" }, { lastName: "Patient" }] },
+    },
+  });
+});
+
 test("overlapping vacancy is rejected and a vacancy can be occupied", async ({
   page,
 }) => {
   await login(page);
-  await page.goto("/he/calendar");
-  await expect(page.getByTestId("clinic-calendar")).toBeVisible({
-    timeout: 15_000,
-  });
+  await openCalendar(page);
 
-  const slot = clinicSlot(11, 1);
-  const panel = page.getByTestId("booking-panel");
-  await panel.locator("select").first().selectOption("VACANCY");
-  await page.getByTestId("draft-start").fill(localInput(slot.start));
-  await page.getByTestId("draft-end").fill(localInput(slot.end));
+  const slot = slotOn(1, 10);
+  await fillVacancyDraft(page, "E2E Vacancy Occupy", slot);
   await page.getByTestId("create-booking").click();
-  await expect(page.getByTestId("booking-panel")).toBeVisible();
-  await expect(page.locator(".fc-kind-vacancy").first()).toBeVisible({
+  await expect(
+    page.locator(".fc-event").filter({ hasText: "E2E Vacancy Occupy" })
+  ).toBeVisible({
     timeout: 10_000,
   });
 
-  await panel.locator("select").first().selectOption("VACANCY");
-  await page.getByTestId("draft-start").fill(localInput(slot.start));
-  await page.getByTestId("draft-end").fill(localInput(slot.end));
+  await fillVacancyDraft(page, "E2E Vacancy Occupy", slot);
   await page.getByTestId("create-booking").click();
   await expect(page.getByTestId("calendar-error")).toBeVisible();
 
-  await page.locator(".fc-kind-vacancy").first().click();
+  await page
+    .locator(".fc-event")
+    .filter({ hasText: "E2E Vacancy Occupy" })
+    .click();
   await expect(page.getByTestId("occupy-vacancy")).toBeVisible();
   await page.getByTestId("occupy-vacancy").click();
-  await expect(page.getByTestId("occupy-vacancy")).toHaveCount(0);
+  await expect(page.getByTestId("occupy-vacancy")).toHaveCount(0, {
+    timeout: 10_000,
+  });
+  await expect(
+    page.locator(".fc-event").filter({ hasText: "Test Patient" }).first()
+  ).toBeVisible();
 });
 
 test("deleting this occurrence leaves the rest of the series", async ({
   page,
 }) => {
   await login(page);
-  await page.goto("/he/calendar");
-  await expect(page.getByTestId("clinic-calendar")).toBeVisible({
-    timeout: 15_000,
-  });
+  await openCalendar(page);
 
-  const slot = clinicSlot(15, 1);
+  const slot = slotOn(1, 13);
   const panel = page.getByTestId("booking-panel");
   await panel.locator("select").first().selectOption("APPOINTMENT");
-  await page.getByTestId("draft-start").fill(localInput(slot.start));
-  await page.getByTestId("draft-end").fill(localInput(slot.end));
-  await page.getByLabel(/חוזר שבועית/).check();
+  await page.getByRole("checkbox", { name: /חוזר שבועית/ }).check();
+  await setDraftTimes(page, slot.start, slot.end);
   await page.getByTestId("create-booking").click();
-  await expect(page.getByText("Test Patient").first()).toBeVisible({
+  await expect(
+    page.locator(".fc-event").filter({ hasText: "Test Patient" }).first()
+  ).toBeVisible({
     timeout: 10_000,
   });
 
-  await page.locator(".fc-kind-appointment").first().click();
+  await page
+    .locator(".fc-event")
+    .filter({ hasText: "Test Patient" })
+    .first()
+    .click();
   page.once("dialog", (dialog) => dialog.accept());
   await page.getByTestId("delete-this-occurrence").click();
-  await expect(page.getByTestId("delete-this-occurrence")).toHaveCount(0);
+  await expect(page.getByTestId("delete-this-occurrence")).toHaveCount(0, {
+    timeout: 10_000,
+  });
 
   await page.locator(".fc-next-button").click();
-  await expect(page.getByText("Test Patient").first()).toBeVisible();
+  await expect(
+    page.locator(".fc-event").filter({ hasText: "Test Patient" }).first()
+  ).toBeVisible();
 });
 
 test("guest can book a public vacancy without logging in", async ({
@@ -90,18 +150,14 @@ test("guest can book a public vacancy without logging in", async ({
   browser,
 }) => {
   await login(page);
-  await page.goto("/he/calendar");
-  await expect(page.getByTestId("clinic-calendar")).toBeVisible({
-    timeout: 15_000,
-  });
+  await openCalendar(page);
 
-  const slot = clinicSlot(16, 2);
-  const panel = page.getByTestId("booking-panel");
-  await panel.locator("select").first().selectOption("VACANCY");
-  await page.getByTestId("draft-start").fill(localInput(slot.start));
-  await page.getByTestId("draft-end").fill(localInput(slot.end));
+  const slot = slotOn(1, 16);
+  await fillVacancyDraft(page, "E2E Public Slot", slot);
   await page.getByTestId("create-booking").click();
-  await expect(page.locator(".fc-kind-vacancy").first()).toBeVisible({
+  await expect(
+    page.locator(".fc-event").filter({ hasText: "E2E Public Slot" })
+  ).toBeVisible({
     timeout: 10_000,
   });
 
@@ -109,16 +165,21 @@ test("guest can book a public vacancy without logging in", async ({
   const url = await page.getByTestId("public-booking-url").innerText();
   expect(url).toContain("/he/book/");
 
+  const guestName = `Public Guest ${Date.now()}`;
   const guest = await browser.newPage();
   await guest.goto(url);
   await expect(guest.getByTestId("public-book-form")).toBeVisible();
-  await guest.locator('input[name="vacancyEventId"]').first().check();
-  await guest.locator('input[name="name"]').fill("Public Guest");
+  await guest
+    .locator("label")
+    .filter({ hasText: "E2E Public Slot" })
+    .locator('input[type="radio"]')
+    .check();
+  await guest.locator('input[name="name"]').fill(guestName);
   await guest.locator('input[name="phone"]').fill("0501112222");
   await guest.getByRole("button", { name: /קבע משבצת/ }).click();
   await expect(guest.getByTestId("public-book-success")).toBeVisible();
   await guest.close();
 
   await page.goto("/he/patients?status=candidate");
-  await expect(page.getByText("Public Guest")).toBeVisible();
+  await expect(page.getByText(guestName).first()).toBeVisible();
 });
