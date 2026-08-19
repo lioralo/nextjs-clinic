@@ -57,7 +57,9 @@ export async function getSessionUserFromRequest(
           Object.entries(headerCookies).map(([name, value]) => ({ name, value })),
         get: (name: string) => headerCookies[name],
       },
-    } as Parameters<typeof getToken>[0] extends { req?: infer R } ? R : never,
+    } as unknown as Parameters<typeof getToken>[0] extends { req?: infer R }
+      ? R
+      : never,
     secret,
   });
   return userFromToken(token);
@@ -92,7 +94,9 @@ export async function getSessionUser(): Promise<SessionUser | null> {
         getAll: () => all,
         get: (name: string) => all.find((cookie) => cookie.name === name)?.value,
       },
-    } as Parameters<typeof getToken>[0] extends { req?: infer R } ? R : never,
+    } as unknown as Parameters<typeof getToken>[0] extends { req?: infer R }
+      ? R
+      : never,
     secret: process.env.NEXTAUTH_SECRET,
   });
   return userFromToken(token);
