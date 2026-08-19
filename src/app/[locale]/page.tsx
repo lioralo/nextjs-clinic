@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 export default async function DashboardPage({
   params,
 }: {
-  params: Promise<{ locale: "en" | "he" }> | { locale: "en" | "he" };
+  params: Promise<{ locale: "en" | "he" }>;
 }) {
   const resolvedParams = await params;
   const locale = resolvedParams.locale;
