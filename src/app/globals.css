@@ -97,3 +97,15 @@ pre {
   cursor: grab;
 }
 
+.clinic-calendar .fc-kind-vacancy {
+  background-color: var(--color-accent) !important;
+  border-color: var(--color-accent) !important;
+  color: #0f172a !important;
+}
+
+.clinic-calendar .fc-kind-block {
+  background-color: #94a3b8 !important;
+  border-color: #64748b !important;
+  color: #0f172a !important;
+}
+

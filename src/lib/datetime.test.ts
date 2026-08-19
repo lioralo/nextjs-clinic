@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseDateInput, toDatetimeLocalValue } from "./datetime";
+import { parseDateInput, startOfWeek, toDatetimeLocalValue } from "./datetime";
 
 describe("datetime helpers", () => {
   it("formats a local datetime-local value", () => {
@@ -17,5 +17,12 @@ describe("datetime helpers", () => {
 
   it("returns null for invalid input", () => {
     expect(parseDateInput("not-a-date")).toBeNull();
+  });
+
+  it("startOfWeek uses Sunday when firstDay is 0", () => {
+    const wednesday = new Date(2026, 7, 19, 12, 0);
+    const start = startOfWeek(wednesday, 0);
+    expect(start.getDay()).toBe(0);
+    expect(start.getDate()).toBe(16);
   });
 });

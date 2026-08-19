@@ -17,11 +17,31 @@ import { prisma } from "./prisma";
 import {
   createAppointment,
   deleteAppointment,
+  expandRecurringForRange,
   listAppointmentsInRange,
   moveAppointment,
   parseAppointmentRange,
+  parseSeriesId,
   toCalendarEvent,
+  type AppointmentRecord,
 } from "./appointment-service";
+
+function series(overrides: Partial<AppointmentRecord> = {}): AppointmentRecord {
+  return {
+    id: "a1",
+    patientId: "p1",
+    startAt: new Date("2026-08-19T09:00:00.000Z"),
+    endAt: new Date("2026-08-19T10:00:00.000Z"),
+    kind: "APPOINTMENT",
+    title: null,
+    isRecurring: false,
+    recurrenceIntervalWeeks: null,
+    recurrenceEndDate: null,
+    meetingType: "IN_PERSON",
+    patient: { firstName: "Test", lastName: "Patient" },
+    ...overrides,
+  };
+}
 
 describe("appointment-service", () => {
   it("parseAppointmentRange accepts a valid window", () => {
@@ -40,27 +60,68 @@ describe("appointment-service", () => {
     expect(parseAppointmentRange("nope", "2026-08-19T09:00")).toBeNull();
   });
 
-  it("toCalendarEvent maps patient name and ISO times", () => {
+  it("toCalendarEvent maps patient name, kind and ISO times", () => {
     const startAt = new Date("2026-08-19T09:00:00.000Z");
     const endAt = new Date("2026-08-19T10:00:00.000Z");
     expect(
-      toCalendarEvent({
-        id: "a1",
-        patientId: "p1",
-        startAt,
-        endAt,
-        patient: { firstName: "Test", lastName: "Patient" },
-      })
+      toCalendarEvent(
+        series({
+          startAt,
+          endAt,
+        })
+      )
     ).toEqual({
       id: "a1",
+      seriesId: "a1",
       patientId: "p1",
       title: "Test Patient",
       start: startAt.toISOString(),
       end: endAt.toISOString(),
+      kind: "APPOINTMENT",
+      isRecurring: false,
+      meetingType: "IN_PERSON",
     });
   });
 
-  it("listAppointmentsInRange queries overlapping scheduled visits", async () => {
+  it("expandRecurringForRange emits weekly occurrences in the window", () => {
+    const occurrences = expandRecurringForRange(
+      series({
+        isRecurring: true,
+        recurrenceIntervalWeeks: 1,
+        recurrenceEndDate: new Date("2026-09-09T00:00:00.000Z"),
+      }),
+      new Date("2026-08-17T00:00:00.000Z"),
+      new Date("2026-09-01T00:00:00.000Z")
+    );
+    expect(occurrences).toHaveLength(2);
+    expect(occurrences[0].startAt.toISOString()).toBe(
+      "2026-08-19T09:00:00.000Z"
+    );
+    expect(occurrences[1].startAt.toISOString()).toBe(
+      "2026-08-26T09:00:00.000Z"
+    );
+  });
+
+  it("vacancy events do not require a patient", () => {
+    const event = toCalendarEvent(
+      series({
+        patientId: null,
+        patient: null,
+        kind: "VACANCY",
+        title: "Open hour",
+      })
+    );
+    expect(event.patientId).toBeNull();
+    expect(event.title).toBe("Open hour");
+    expect(event.kind).toBe("VACANCY");
+  });
+
+  it("parseSeriesId strips occurrence suffix", () => {
+    expect(parseSeriesId("a1__2026-08-19T09:00:00.000Z")).toBe("a1");
+    expect(parseSeriesId("a1")).toBe("a1");
+  });
+
+  it("listAppointmentsInRange queries overlapping and recurring visits", async () => {
     const start = new Date("2026-08-01T00:00:00.000Z");
     const end = new Date("2026-09-01T00:00:00.000Z");
     (prisma.appointment.findMany as ReturnType<typeof vi.fn>).mockResolvedValue(
@@ -71,12 +132,59 @@ describe("appointment-service", () => {
 
     expect(prisma.appointment.findMany).toHaveBeenCalledWith({
       where: {
-        startAt: { lt: end },
-        endAt: { gt: start },
         status: { not: "CANCELLED" },
+        OR: [
+          {
+            isRecurring: false,
+            startAt: { lt: end },
+            endAt: { gt: start },
+          },
+          {
+            isRecurring: true,
+            startAt: { lt: end },
+            OR: [
+              { recurrenceEndDate: null },
+              { recurrenceEndDate: { gte: start } },
+            ],
+          },
+        ],
       },
       include: { patient: true },
       orderBy: { startAt: "asc" },
+    });
+  });
+
+  it("createAppointment stores a vacancy without a patient", async () => {
+    (prisma.appointment.create as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: "v1",
+    });
+    const startAt = new Date("2026-08-19T09:00:00.000Z");
+    const endAt = new Date("2026-08-19T10:00:00.000Z");
+
+    await createAppointment({
+      providerId: "u1",
+      startAt,
+      endAt,
+      kind: "VACANCY",
+      title: "Gap",
+    });
+
+    expect(prisma.appointment.create).toHaveBeenCalledWith({
+      data: {
+        patientId: null,
+        providerId: "u1",
+        startAt,
+        endAt,
+        status: "SCHEDULED",
+        kind: "VACANCY",
+        title: "Gap",
+        meetingType: "IN_PERSON",
+        meetingLink: null,
+        isRecurring: false,
+        recurrenceIntervalWeeks: null,
+        recurrenceEndDate: null,
+        recurrenceGroupId: null,
+      },
     });
   });
 
@@ -101,6 +209,14 @@ describe("appointment-service", () => {
         startAt,
         endAt,
         status: "SCHEDULED",
+        kind: "APPOINTMENT",
+        title: null,
+        meetingType: "IN_PERSON",
+        meetingLink: null,
+        isRecurring: false,
+        recurrenceIntervalWeeks: null,
+        recurrenceEndDate: null,
+        recurrenceGroupId: null,
       },
     });
   });

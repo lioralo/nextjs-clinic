@@ -21,9 +21,10 @@ async function main() {
     });
   }
 
-  // Seed one sample patient for e2e smoke tests.
-  const patientCount = await prisma.patient.count();
-  if (patientCount === 0) {
+  const sample = await prisma.patient.findFirst({
+    where: { firstName: "Test", lastName: "Patient" },
+  });
+  if (!sample) {
     await prisma.patient.create({
       data: {
         firstName: "Test",
@@ -31,7 +32,14 @@ async function main() {
         phone: "0500000000",
         email: null,
         notesText: "Seeded sample patient for e2e.",
+        status: "ONGOING",
+        patientType: "PRIVATE",
       },
+    });
+  } else {
+    await prisma.patient.update({
+      where: { id: sample.id },
+      data: { status: "ONGOING", patientType: "PRIVATE" },
     });
   }
 }
@@ -45,4 +53,3 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
-

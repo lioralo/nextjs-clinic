@@ -1,11 +1,15 @@
 "use server";
 
+import type { PatientStatus, PatientType } from "@prisma/client";
 import { redirect } from "next/navigation";
 
+import { parseDateInput } from "@/lib/datetime";
 import { normalizeLocale } from "@/lib/locale";
 import {
   addNote,
   createPatient,
+  deleteNote,
+  updateNote,
   updatePatient,
 } from "@/lib/patient-service";
 import { revalidateClinic } from "@/lib/revalidate";
@@ -14,6 +18,37 @@ import { getSessionUser } from "@/lib/session";
 function emptyToNull(value: string): string | null {
   const trimmed = value.trim();
   return trimmed ? trimmed : null;
+}
+
+function parseStatus(value: string): PatientStatus {
+  if (
+    value === "ONGOING" ||
+    value === "CANDIDATE" ||
+    value === "WAITING" ||
+    value === "ARCHIVED"
+  ) {
+    return value;
+  }
+  return "CANDIDATE";
+}
+
+function parseType(value: string): PatientType {
+  if (
+    value === "PRIVATE" ||
+    value === "RESIDENCY" ||
+    value === "GROUP" ||
+    value === "INITIAL_INTAKE"
+  ) {
+    return value;
+  }
+  return "PRIVATE";
+}
+
+function parseOptionalInt(value: string): number | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const parsed = Number.parseInt(trimmed, 10);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 export async function createPatientAction(
@@ -26,6 +61,10 @@ export async function createPatientAction(
   const phone = emptyToNull(String(formData.get("phone") ?? ""));
   const email = emptyToNull(String(formData.get("email") ?? ""));
   const notesText = emptyToNull(String(formData.get("notesText") ?? ""));
+  const idNumber = emptyToNull(String(formData.get("idNumber") ?? ""));
+  const birthDate = parseDateInput(String(formData.get("birthDate") ?? ""));
+  const status = parseStatus(String(formData.get("status") ?? ""));
+  const patientType = parseType(String(formData.get("patientType") ?? ""));
 
   if (!firstName || !lastName) {
     redirect(`/${loc}/patients/new`);
@@ -37,6 +76,10 @@ export async function createPatientAction(
     phone,
     email,
     notesText,
+    status,
+    patientType,
+    birthDate,
+    idNumber,
   });
 
   revalidateClinic();
@@ -54,6 +97,10 @@ export async function updatePatientAction(
   const phone = emptyToNull(String(formData.get("phone") ?? ""));
   const email = emptyToNull(String(formData.get("email") ?? ""));
   const notesText = emptyToNull(String(formData.get("notesText") ?? ""));
+  const idNumber = emptyToNull(String(formData.get("idNumber") ?? ""));
+  const birthDate = parseDateInput(String(formData.get("birthDate") ?? ""));
+  const status = parseStatus(String(formData.get("status") ?? ""));
+  const patientType = parseType(String(formData.get("patientType") ?? ""));
 
   if (!patientId || !firstName || !lastName) {
     redirect(`/${loc}/patients/${patientId}`);
@@ -65,6 +112,10 @@ export async function updatePatientAction(
     phone,
     email,
     notesText,
+    status,
+    patientType,
+    birthDate,
+    idNumber,
   });
 
   revalidateClinic(patientId);
@@ -77,6 +128,11 @@ export async function addNoteAction(
 ) {
   const loc = normalizeLocale(locale) ?? "he";
   const content = String(formData.get("content") ?? "").trim();
+  const keyTopics = emptyToNull(String(formData.get("keyTopics") ?? ""));
+  const sessionNumber = parseOptionalInt(
+    String(formData.get("sessionNumber") ?? "")
+  );
+  const noteDate = parseDateInput(String(formData.get("noteDate") ?? ""));
   const user = await getSessionUser();
   if (!user) {
     redirect(`/${loc}/login`);
@@ -86,12 +142,61 @@ export async function addNoteAction(
     redirect(`/${loc}/patients/${patientId}`);
   }
 
-  const authorId = user.id;
   await addNote({
     patientId,
-    authorId,
+    authorId: user.id,
     content,
+    keyTopics,
+    sessionNumber,
+    noteDate,
   });
 
+  revalidateClinic(patientId);
+}
+
+export async function updateNoteAction(
+  locale: string,
+  patientId: string,
+  noteId: string,
+  formData: FormData
+) {
+  const loc = normalizeLocale(locale) ?? "he";
+  const content = String(formData.get("content") ?? "").trim();
+  const keyTopics = emptyToNull(String(formData.get("keyTopics") ?? ""));
+  const sessionNumber = parseOptionalInt(
+    String(formData.get("sessionNumber") ?? "")
+  );
+  const noteDate = parseDateInput(String(formData.get("noteDate") ?? ""));
+  const user = await getSessionUser();
+  if (!user) {
+    redirect(`/${loc}/login`);
+  }
+  if (!noteId || !content) {
+    redirect(`/${loc}/patients/${patientId}`);
+  }
+
+  await updateNote(noteId, {
+    content,
+    keyTopics,
+    sessionNumber,
+    noteDate,
+  });
+  revalidateClinic(patientId);
+}
+
+export async function deleteNoteAction(
+  locale: string,
+  patientId: string,
+  noteId: string
+) {
+  const loc = normalizeLocale(locale) ?? "he";
+  const user = await getSessionUser();
+  if (!user) {
+    redirect(`/${loc}/login`);
+  }
+  if (!noteId) {
+    redirect(`/${loc}/patients/${patientId}`);
+  }
+  await deleteNote(noteId);
   revalidateClinic(patientId);
 }

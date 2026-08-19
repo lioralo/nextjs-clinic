@@ -1,5 +1,6 @@
 "use server";
 
+import type { AppointmentKind, MeetingType } from "@prisma/client";
 import { redirect } from "next/navigation";
 
 import {
@@ -7,7 +8,9 @@ import {
   deleteAppointment,
   moveAppointment,
   parseAppointmentRange,
+  parseSeriesId,
 } from "@/lib/appointment-service";
+import { parseDateInput } from "@/lib/datetime";
 import { normalizeLocale } from "@/lib/locale";
 import { revalidateClinic } from "@/lib/revalidate";
 import { getSessionUser } from "@/lib/session";
@@ -15,6 +18,30 @@ import { getSessionUser } from "@/lib/session";
 export type AppointmentActionResult =
   | { ok: true; id?: string }
   | { ok: false; error: string };
+
+export type CalendarBookingInput = {
+  kind?: AppointmentKind | string;
+  patientId?: string;
+  startAt: string;
+  endAt: string;
+  title?: string;
+  meetingType?: MeetingType | string;
+  meetingLink?: string;
+  isRecurring?: boolean;
+  recurrenceEndDate?: string;
+  locale?: string;
+};
+
+function parseKind(value: string | undefined): AppointmentKind {
+  if (value === "VACANCY" || value === "BLOCK" || value === "APPOINTMENT") {
+    return value;
+  }
+  return "APPOINTMENT";
+}
+
+function parseMeetingType(value: string | undefined): MeetingType {
+  return value === "ONLINE" ? "ONLINE" : "IN_PERSON";
+}
 
 async function requireUserId(locale: string): Promise<string> {
   const user = await getSessionUser();
@@ -27,9 +54,15 @@ async function requireUserId(locale: string): Promise<string> {
 export async function createAppointmentFormAction(formData: FormData) {
   const locale = String(formData.get("locale") ?? "he");
   const result = await createAppointmentRecord({
+    kind: String(formData.get("kind") ?? "APPOINTMENT"),
     patientId: String(formData.get("patientId") ?? ""),
     startAt: String(formData.get("startAt") ?? ""),
     endAt: String(formData.get("endAt") ?? ""),
+    title: String(formData.get("title") ?? ""),
+    meetingType: String(formData.get("meetingType") ?? "IN_PERSON"),
+    meetingLink: String(formData.get("meetingLink") ?? ""),
+    isRecurring: String(formData.get("isRecurring") ?? "") === "1",
+    recurrenceEndDate: String(formData.get("recurrenceEndDate") ?? ""),
     locale,
   });
 
@@ -38,25 +71,35 @@ export async function createAppointmentFormAction(formData: FormData) {
   }
 }
 
-export async function createAppointmentRecord(input: {
-  patientId: string;
-  startAt: string;
-  endAt: string;
-  locale?: string;
-}): Promise<AppointmentActionResult> {
+export async function createAppointmentRecord(
+  input: CalendarBookingInput
+): Promise<AppointmentActionResult> {
   const locale = input.locale ?? "he";
   const userId = await requireUserId(locale);
   const range = parseAppointmentRange(input.startAt, input.endAt);
+  const kind = parseKind(input.kind);
 
-  if (!input.patientId || !range) {
+  if (!range) {
+    return { ok: false, error: "invalid" };
+  }
+  if (kind === "APPOINTMENT" && !input.patientId) {
     return { ok: false, error: "invalid" };
   }
 
   const created = await createAppointment({
-    patientId: input.patientId,
+    patientId: kind === "APPOINTMENT" ? input.patientId : null,
     providerId: userId,
     startAt: range.startAt,
     endAt: range.endAt,
+    kind,
+    title: input.title?.trim() || null,
+    meetingType: parseMeetingType(input.meetingType),
+    meetingLink: input.meetingLink?.trim() || null,
+    isRecurring: Boolean(input.isRecurring),
+    recurrenceIntervalWeeks: 1,
+    recurrenceEndDate: input.recurrenceEndDate
+      ? parseDateInput(input.recurrenceEndDate)
+      : null,
   });
 
   revalidateClinic();
@@ -74,13 +117,14 @@ export async function updateAppointmentTimesAction(
   }
 
   const range = parseAppointmentRange(startAt, endAt);
-  if (!appointmentId || !range) {
+  const seriesId = parseSeriesId(appointmentId);
+  if (!seriesId || !range) {
     return { ok: false, error: "invalid" };
   }
 
-  await moveAppointment(appointmentId, range.startAt, range.endAt);
+  await moveAppointment(seriesId, range.startAt, range.endAt);
   revalidateClinic();
-  return { ok: true, id: appointmentId };
+  return { ok: true, id: seriesId };
 }
 
 export async function deleteAppointmentAction(
@@ -91,11 +135,12 @@ export async function deleteAppointmentAction(
     return { ok: false, error: "unauthorized" };
   }
 
-  if (!appointmentId) {
+  const seriesId = parseSeriesId(appointmentId);
+  if (!seriesId) {
     return { ok: false, error: "invalid" };
   }
 
-  await deleteAppointment(appointmentId);
+  await deleteAppointment(seriesId);
   revalidateClinic();
-  return { ok: true, id: appointmentId };
+  return { ok: true, id: seriesId };
 }
