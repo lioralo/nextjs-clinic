@@ -1,23 +1,19 @@
-import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
 
 import {
   applyCalendarIntent,
   calendarPath,
 } from "@/lib/calendar-mutations";
+import { getSessionUserFromRequest } from "@/lib/session";
 
 export async function POST(req: NextRequest) {
   const formData = await req.formData();
   const locale = String(formData.get("locale") ?? "he");
   const ajax = String(formData.get("ajax") ?? "") === "1";
 
-  const token = await getToken({
-    req,
-    secret: process.env.NEXTAUTH_SECRET,
-  });
-  const userId = typeof token?.id === "string" ? token.id : token?.sub;
+  const user = await getSessionUserFromRequest(req);
 
-  if (!userId) {
+  if (!user) {
     if (ajax) {
       return NextResponse.json({ ok: false, error: "unauthorized" });
     }
@@ -27,7 +23,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const result = await applyCalendarIntent(userId, formData);
+  const result = await applyCalendarIntent(user.id, formData);
 
   if (ajax) {
     return NextResponse.json(result);

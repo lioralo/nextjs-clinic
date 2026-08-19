@@ -57,6 +57,7 @@ async function setDraftTimes(page: Page, start: Date, end: Date) {
 async function fillVacancyDraft(page: Page, title: string, slot: { start: Date; end: Date }) {
   const panel = page.getByTestId("booking-panel");
   await panel.locator("select").first().selectOption("VACANCY");
+  await page.getByRole("checkbox", { name: /חוזר שבועית/ }).uncheck();
   await page.getByTestId("draft-title").fill(title);
   await setDraftTimes(page, slot.start, slot.end);
 }
@@ -173,6 +174,7 @@ test("guest can book a public vacancy without logging in", async ({
     .locator("label")
     .filter({ hasText: "E2E Public Slot" })
     .locator('input[type="radio"]')
+    .first()
     .check();
   await guest.locator('input[name="name"]').fill(guestName);
   await guest.locator('input[name="phone"]').fill("0501112222");

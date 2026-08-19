@@ -555,10 +555,19 @@ export function ClinicCalendar({
                 name="kind"
                 value={draft.kind}
                 onChange={(e) =>
-                  setDraft((current) => ({
-                    ...current,
-                    kind: e.target.value as Draft["kind"],
-                  }))
+                  setDraft((current) => {
+                    const kind = e.target.value as Draft["kind"];
+                    return {
+                      ...current,
+                      kind,
+                      isRecurring:
+                        kind === "APPOINTMENT"
+                          ? defaultRecurring(
+                              patients.find((patient) => patient.id === current.patientId)
+                            )
+                          : false,
+                    };
+                  })
                 }
                 className="rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"
               >
