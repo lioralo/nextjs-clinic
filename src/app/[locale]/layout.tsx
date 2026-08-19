@@ -1,6 +1,5 @@
 import React from "react";
 import { notFound } from "next/navigation";
-import AppShell from "@/components/app-shell";
 import SessionProviderWrapper from "@/components/session-provider";
 
 export default async function LocaleLayout({
@@ -8,7 +7,6 @@ export default async function LocaleLayout({
   params,
 }: {
   children: React.ReactNode;
-  // Next 16 may pass params as a Promise in async server components.
   params: Promise<{ locale: string }> | { locale: string };
 }) {
   const resolvedParams = await params;
@@ -26,9 +24,8 @@ export default async function LocaleLayout({
   return (
     <SessionProviderWrapper>
       <div dir={dir} lang={locale}>
-        <AppShell locale={locale}>{children}</AppShell>
+        {children}
       </div>
     </SessionProviderWrapper>
   );
 }
-

@@ -1,4 +1,5 @@
 import { ClinicCalendarLoader } from "@/components/calendar/clinic-calendar-loader";
+import { PublicBookingLinkButton } from "@/components/calendar/public-booking-link-button";
 import {
   listAppointmentsInRange,
   toCalendarEvent,
@@ -36,6 +37,8 @@ export default async function CalendarPage({
           "תכנן פגישות, חשוף זמנים פנויים למטופלים, וסקור לחץ מעקב מסביבת תזמון אחת."
         )}
       </p>
+
+      <PublicBookingLinkButton locale={locale} />
 
       <ClinicCalendarLoader
         locale={locale}

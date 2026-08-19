@@ -107,6 +107,7 @@ describe("patient-service (CRUD wrappers)", () => {
             status: { not: "CANCELLED" },
           },
           orderBy: { startAt: "asc" },
+          include: { exceptions: true },
         },
       },
     });

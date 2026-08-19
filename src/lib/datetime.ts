@@ -34,3 +34,34 @@ export function addWeeks(date: Date, weeks: number): Date {
 export function toDateInputValue(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
+
+const CLINIC_OPEN_MINUTES = 8 * 60;
+const CLINIC_LAST_START_MINUTES = 19 * 60 + 30;
+
+function minutesOfDay(date: Date) {
+  return date.getHours() * 60 + date.getMinutes();
+}
+
+/** Next 30-minute clinic slot whose start is inside 08:00–19:30 local time. */
+export function snapToClinicHours(
+  from = new Date(),
+  durationMinutes = 60
+): { start: Date; end: Date } {
+  const start = new Date(from);
+  start.setSeconds(0, 0);
+  const remainder = start.getMinutes() % 30;
+  if (remainder !== 0 || start.getTime() < from.getTime()) {
+    start.setMinutes(start.getMinutes() + (30 - remainder || 30));
+  }
+
+  const mins = minutesOfDay(start);
+  if (mins < CLINIC_OPEN_MINUTES) {
+    start.setHours(8, 0, 0, 0);
+  } else if (mins > CLINIC_LAST_START_MINUTES) {
+    start.setDate(start.getDate() + 1);
+    start.setHours(8, 0, 0, 0);
+  }
+
+  const end = new Date(start.getTime() + durationMinutes * 60 * 1000);
+  return { start, end };
+}

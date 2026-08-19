@@ -7,19 +7,22 @@ import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 
 import {
   createAppointmentRecord,
   deleteAppointmentAction,
+  occupyVacancyAction,
+  updateAppointmentDetailsAction,
   updateAppointmentTimesAction,
-} from "@/app/[locale]/calendar/actions";
+  type RecurrenceScope,
+} from "@/app/[locale]/(clinic)/calendar/actions";
 import type {
   CalendarEventDTO,
   PatientOptionDTO,
 } from "@/lib/appointment-service";
 import { kindLabel, t } from "@/lib/copy";
-import { toDatetimeLocalValue } from "@/lib/datetime";
+import { snapToClinicHours, toDatetimeLocalValue } from "@/lib/datetime";
 import type { AppLocale } from "@/lib/locale";
 
 type Props = {
@@ -57,9 +60,7 @@ function defaultRecurring(patient: PatientOptionDTO | undefined) {
 
 function emptyDraft(patients: PatientOptionDTO[]): Draft {
   const first = patients[0];
-  const now = new Date();
-  const start = new Date(now.getTime() + 60 * 60 * 1000);
-  const end = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+  const { start, end } = snapToClinicHours();
   return {
     kind: "APPOINTMENT",
     patientId: first?.id ?? "",
@@ -73,12 +74,53 @@ function emptyDraft(patients: PatientOptionDTO[]): Draft {
   };
 }
 
+function actionMessage(locale: AppLocale, error: string | undefined) {
+  if (error === "conflict") {
+    return t(
+      locale,
+      "That time overlaps another meeting, vacancy, or block.",
+      "הזמן חופף לפגישה, זמינות או חסימה אחרת."
+    );
+  }
+  return t(locale, "Booking failed.", "הקביעה נכשלה.");
+}
+
+function askScope(
+  locale: AppLocale,
+  isRecurring: boolean
+): RecurrenceScope | null {
+  if (!isRecurring) return "series";
+  const thisOnly = window.confirm(
+    t(
+      locale,
+      "Apply to this meeting only?\nOK = this meeting\nCancel = entire series",
+      "להחיל רק על הפגישה הזו?\nאישור = פגישה זו\nביטול = כל הסדרה"
+    )
+  );
+  return thisOnly ? "this" : "series";
+}
+
 export function ClinicCalendar({ locale, patients, appointments }: Props) {
   const router = useRouter();
   const [draft, setDraft] = useState<Draft>(() => emptyDraft(patients));
   const [selected, setSelected] = useState<SelectedEvent | null>(null);
+  const [editStart, setEditStart] = useState("");
+  const [editEnd, setEditEnd] = useState("");
+  const [editMeetingType, setEditMeetingType] = useState<"IN_PERSON" | "ONLINE">(
+    "IN_PERSON"
+  );
+  const [editMeetingLink, setEditMeetingLink] = useState("");
+  const [occupyPatientId, setOccupyPatientId] = useState(patients[0]?.id ?? "");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!selected) return;
+    setEditStart(toDatetimeLocalValue(new Date(selected.start)));
+    setEditEnd(toDatetimeLocalValue(new Date(selected.end)));
+    setEditMeetingType(selected.meetingType === "ONLINE" ? "ONLINE" : "IN_PERSON");
+    setEditMeetingLink(selected.meetingLink ?? "");
+  }, [selected]);
 
   const events = useMemo(
     () =>
@@ -94,6 +136,8 @@ export function ClinicCalendar({ locale, patients, appointments }: Props) {
           kind: appointment.kind,
           seriesId: appointment.seriesId,
           isRecurring: appointment.isRecurring,
+          meetingType: appointment.meetingType,
+          meetingLink: appointment.meetingLink,
         },
       })),
     [appointments]
@@ -105,18 +149,23 @@ export function ClinicCalendar({ locale, patients, appointments }: Props) {
     id: string,
     start: Date,
     end: Date,
-    revert: () => void
+    revert: () => void,
+    isRecurring: boolean
   ) {
+    const scope = askScope(locale, isRecurring);
+    if (!scope) {
+      revert();
+      return;
+    }
     const result = await updateAppointmentTimesAction(
       id,
       start.toISOString(),
-      end.toISOString()
+      end.toISOString(),
+      scope
     );
     if (!result.ok) {
       revert();
-      setError(
-        t(locale, "Could not save meeting changes.", "לא ניתן לשמור את שינויי הפגישה.")
-      );
+      setError(actionMessage(locale, result.error));
       return;
     }
     router.refresh();
@@ -141,24 +190,65 @@ export function ClinicCalendar({ locale, patients, appointments }: Props) {
     });
     setSaving(false);
     if (!result.ok) {
-      setError(t(locale, "Booking failed.", "הקביעה נכשלה."));
+      setError(actionMessage(locale, result.error));
       return;
     }
     setSelected(null);
     router.refresh();
   }
 
-  async function onDelete() {
+  async function onSave(scope: RecurrenceScope) {
+    if (!selected) return;
+    setSaving(true);
+    setError(null);
+    const result = await updateAppointmentDetailsAction({
+      appointmentId: selected.id,
+      startAt: editStart,
+      endAt: editEnd,
+      meetingType: editMeetingType,
+      meetingLink: editMeetingLink,
+      scope,
+    });
+    setSaving(false);
+    if (!result.ok) {
+      setError(actionMessage(locale, result.error));
+      return;
+    }
+    setSelected(null);
+    router.refresh();
+  }
+
+  async function onDelete(scope: RecurrenceScope) {
     if (!selected) return;
     const confirmed = window.confirm(
-      t(locale, "Delete appointment?", "למחוק פגישה?")
+      scope === "this"
+        ? t(locale, "Delete this meeting?", "למחוק את הפגישה הזו?")
+        : t(locale, "Delete entire series?", "למחוק את כל הסדרה?")
     );
     if (!confirmed) return;
     setSaving(true);
-    const result = await deleteAppointmentAction(selected.id);
+    const result = await deleteAppointmentAction(selected.id, scope);
     setSaving(false);
     if (!result.ok) {
       setError(t(locale, "Could not delete meeting.", "לא ניתן למחוק את הפגישה."));
+      return;
+    }
+    setSelected(null);
+    router.refresh();
+  }
+
+  async function onOccupy() {
+    if (!selected || !occupyPatientId) return;
+    setSaving(true);
+    setError(null);
+    const result = await occupyVacancyAction({
+      vacancyEventId: selected.id,
+      patientId: occupyPatientId,
+      locale,
+    });
+    setSaving(false);
+    if (!result.ok) {
+      setError(actionMessage(locale, result.error));
       return;
     }
     setSelected(null);
@@ -172,7 +262,10 @@ export function ClinicCalendar({ locale, patients, appointments }: Props) {
     >
       <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 overflow-x-auto">
         {error ? (
-          <div className="mb-3 text-sm text-[var(--color-primary-dark)]">
+          <div
+            className="mb-3 text-sm text-[var(--color-primary-dark)]"
+            data-testid="calendar-error"
+          >
             {error}
           </div>
         ) : null}
@@ -203,7 +296,7 @@ export function ClinicCalendar({ locale, patients, appointments }: Props) {
           expandRows
           height="auto"
           slotMinTime="08:00:00"
-          slotMaxTime="20:00:00"
+          slotMaxTime="21:00:00"
           slotDuration="00:30:00"
           snapDuration="00:15:00"
           allDaySlot={false}
@@ -221,6 +314,7 @@ export function ClinicCalendar({ locale, patients, appointments }: Props) {
             const range = eventTimes(info.event);
             if (!range) return;
             const kind = String(info.event.extendedProps.kind ?? "APPOINTMENT");
+            setError(null);
             setSelected({
               id: info.event.id,
               seriesId: String(info.event.extendedProps.seriesId ?? info.event.id),
@@ -233,7 +327,13 @@ export function ClinicCalendar({ locale, patients, appointments }: Props) {
               kind:
                 kind === "VACANCY" || kind === "BLOCK" ? kind : "APPOINTMENT",
               isRecurring: Boolean(info.event.extendedProps.isRecurring),
-              meetingType: "IN_PERSON",
+              meetingType:
+                info.event.extendedProps.meetingType === "ONLINE"
+                  ? "ONLINE"
+                  : "IN_PERSON",
+              meetingLink: info.event.extendedProps.meetingLink
+                ? String(info.event.extendedProps.meetingLink)
+                : null,
             });
           }}
           eventDrop={(info) => {
@@ -246,7 +346,13 @@ export function ClinicCalendar({ locale, patients, appointments }: Props) {
               info.revert();
               return;
             }
-            void persistMove(info.event.id, range.start, range.end, info.revert);
+            void persistMove(
+              info.event.id,
+              range.start,
+              range.end,
+              info.revert,
+              Boolean(info.event.extendedProps.isRecurring)
+            );
           }}
           eventResize={(info) => {
             if (info.event.extendedProps.kind !== "APPOINTMENT") {
@@ -258,7 +364,13 @@ export function ClinicCalendar({ locale, patients, appointments }: Props) {
               info.revert();
               return;
             }
-            void persistMove(info.event.id, range.start, range.end, info.revert);
+            void persistMove(
+              info.event.id,
+              range.start,
+              range.end,
+              info.revert,
+              Boolean(info.event.extendedProps.isRecurring)
+            );
           }}
         />
       </div>
@@ -276,10 +388,106 @@ export function ClinicCalendar({ locale, patients, appointments }: Props) {
                 ? ` · ${t(locale, "Recurring", "חוזר")}`
                 : ""}
             </p>
-            <p className="text-sm text-[var(--color-foreground)]/70">
-              {new Date(selected.start).toLocaleString(locale)} –{" "}
-              {new Date(selected.end).toLocaleString(locale)}
-            </p>
+
+            {selected.kind === "VACANCY" ? (
+              <label className="flex flex-col gap-1 text-sm">
+                {t(locale, "Book this vacancy for", "קבע זמינות זו עבור")}
+                <select
+                  data-testid="occupy-patient"
+                  value={occupyPatientId}
+                  onChange={(e) => setOccupyPatientId(e.target.value)}
+                  className="rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"
+                >
+                  {patients.map((patient) => (
+                    <option key={patient.id} value={patient.id}>
+                      {patient.firstName} {patient.lastName}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  data-testid="occupy-vacancy"
+                  onClick={() => void onOccupy()}
+                  disabled={saving || patients.length === 0}
+                  className="rounded-xl bg-[var(--color-primary)] text-[var(--color-surface)] px-4 py-2 font-semibold disabled:opacity-60"
+                >
+                  {t(locale, "Occupy slot", "תפוס משבצת")}
+                </button>
+              </label>
+            ) : (
+              <>
+                <label className="flex flex-col gap-1 text-sm">
+                  {t(locale, "Start Time", "שעת התחלה")}
+                  <input
+                    type="datetime-local"
+                    value={editStart}
+                    onChange={(e) => setEditStart(e.target.value)}
+                    className="rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm">
+                  {t(locale, "End Time", "שעת סיום")}
+                  <input
+                    type="datetime-local"
+                    value={editEnd}
+                    onChange={(e) => setEditEnd(e.target.value)}
+                    className="rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"
+                  />
+                </label>
+                {selected.kind === "APPOINTMENT" ? (
+                  <label className="flex flex-col gap-1 text-sm">
+                    {t(locale, "Meeting Type", "סוג פגישה")}
+                    <select
+                      value={editMeetingType}
+                      onChange={(e) =>
+                        setEditMeetingType(
+                          e.target.value as "IN_PERSON" | "ONLINE"
+                        )
+                      }
+                      className="rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"
+                    >
+                      <option value="IN_PERSON">
+                        {t(locale, "In-person", "פרונטלי")}
+                      </option>
+                      <option value="ONLINE">
+                        {t(locale, "Online", "אונליין")}
+                      </option>
+                    </select>
+                  </label>
+                ) : null}
+                {selected.isRecurring ? (
+                  <div className="flex flex-col gap-2">
+                    <button
+                      type="button"
+                      data-testid="save-this-occurrence"
+                      onClick={() => void onSave("this")}
+                      disabled={saving}
+                      className="rounded-xl bg-[var(--color-primary)] text-[var(--color-surface)] px-4 py-2 font-semibold disabled:opacity-60"
+                    >
+                      {t(locale, "Save this meeting", "שמור פגישה זו")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void onSave("series")}
+                      disabled={saving}
+                      className="rounded-xl border border-[var(--color-border)] px-4 py-2 disabled:opacity-60"
+                    >
+                      {t(locale, "Save entire series", "שמור את כל הסדרה")}
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => void onSave("series")}
+                    disabled={saving}
+                    className="rounded-xl bg-[var(--color-primary)] text-[var(--color-surface)] px-4 py-2 font-semibold disabled:opacity-60"
+                  >
+                    {t(locale, "Save changes", "שמור שינויים")}
+                  </button>
+                )}
+              </>
+            )}
+
             <div className="flex flex-col gap-2">
               {selected.patientId ? (
                 <Link
@@ -289,14 +497,36 @@ export function ClinicCalendar({ locale, patients, appointments }: Props) {
                   {t(locale, "Open Patient Profile", "פתח פרופיל מטופל")}
                 </Link>
               ) : null}
-              <button
-                type="button"
-                onClick={() => void onDelete()}
-                disabled={saving}
-                className="rounded-xl border border-[var(--color-border)] px-4 py-2 disabled:opacity-60"
-              >
-                {t(locale, "Delete Meeting", "מחק פגישה")}
-              </button>
+              {selected.isRecurring ? (
+                <>
+                  <button
+                    type="button"
+                    data-testid="delete-this-occurrence"
+                    onClick={() => void onDelete("this")}
+                    disabled={saving}
+                    className="rounded-xl border border-[var(--color-border)] px-4 py-2 disabled:opacity-60"
+                  >
+                    {t(locale, "Delete this meeting", "מחק פגישה זו")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void onDelete("series")}
+                    disabled={saving}
+                    className="rounded-xl border border-[var(--color-border)] px-4 py-2 disabled:opacity-60"
+                  >
+                    {t(locale, "Delete entire series", "מחק את כל הסדרה")}
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => void onDelete("series")}
+                  disabled={saving}
+                  className="rounded-xl border border-[var(--color-border)] px-4 py-2 disabled:opacity-60"
+                >
+                  {t(locale, "Delete Meeting", "מחק פגישה")}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setSelected(null)}
@@ -400,6 +630,7 @@ export function ClinicCalendar({ locale, patients, appointments }: Props) {
               <input
                 type="datetime-local"
                 required
+                data-testid="draft-start"
                 value={draft.startAt}
                 onChange={(e) =>
                   setDraft((current) => ({ ...current, startAt: e.target.value }))
@@ -412,6 +643,7 @@ export function ClinicCalendar({ locale, patients, appointments }: Props) {
               <input
                 type="datetime-local"
                 required
+                data-testid="draft-end"
                 value={draft.endAt}
                 onChange={(e) =>
                   setDraft((current) => ({ ...current, endAt: e.target.value }))
@@ -491,6 +723,7 @@ export function ClinicCalendar({ locale, patients, appointments }: Props) {
 
             <button
               type="submit"
+              data-testid="create-booking"
               disabled={saving || (draft.kind === "APPOINTMENT" && patients.length === 0)}
               className="rounded-xl bg-[var(--color-primary)] text-[var(--color-surface)] py-2 px-3 font-semibold hover:opacity-90 disabled:opacity-60"
             >

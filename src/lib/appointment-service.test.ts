@@ -5,9 +5,13 @@ vi.mock("./prisma", () => {
     prisma: {
       appointment: {
         findMany: vi.fn(),
+        findUnique: vi.fn(),
         create: vi.fn(),
         update: vi.fn(),
         delete: vi.fn(),
+      },
+      recurrenceException: {
+        upsert: vi.fn(),
       },
     },
   };
@@ -18,10 +22,15 @@ import {
   createAppointment,
   deleteAppointment,
   expandRecurringForRange,
+  findConflict,
+  isVacancyOccurrence,
   listAppointmentsInRange,
   moveAppointment,
   parseAppointmentRange,
+  parseEventId,
   parseSeriesId,
+  rangesOverlap,
+  splitPersonName,
   toCalendarEvent,
   type AppointmentRecord,
 } from "./appointment-service";
@@ -80,6 +89,7 @@ describe("appointment-service", () => {
       kind: "APPOINTMENT",
       isRecurring: false,
       meetingType: "IN_PERSON",
+      meetingLink: null,
     });
   });
 
@@ -119,6 +129,81 @@ describe("appointment-service", () => {
   it("parseSeriesId strips occurrence suffix", () => {
     expect(parseSeriesId("a1__2026-08-19T09:00:00.000Z")).toBe("a1");
     expect(parseSeriesId("a1")).toBe("a1");
+    expect(parseEventId("a1__2026-08-19T09:00:00.000Z").occurrenceStart?.toISOString()).toBe(
+      "2026-08-19T09:00:00.000Z"
+    );
+  });
+
+  it("expandRecurringForRange skips and moves exception dates", () => {
+    const skipped = expandRecurringForRange(
+      series({
+        isRecurring: true,
+        recurrenceIntervalWeeks: 1,
+        recurrenceEndDate: new Date("2026-09-09T00:00:00.000Z"),
+        exceptions: [
+          {
+            occurrenceStart: new Date("2026-08-19T09:00:00.000Z"),
+            kind: "SKIP",
+            newStartAt: null,
+            newEndAt: null,
+          },
+        ],
+      }),
+      new Date("2026-08-17T00:00:00.000Z"),
+      new Date("2026-09-01T00:00:00.000Z")
+    );
+    expect(skipped).toHaveLength(1);
+    expect(skipped[0].startAt.toISOString()).toBe("2026-08-26T09:00:00.000Z");
+
+    const moved = expandRecurringForRange(
+      series({
+        isRecurring: true,
+        recurrenceIntervalWeeks: 1,
+        recurrenceEndDate: new Date("2026-09-09T00:00:00.000Z"),
+        exceptions: [
+          {
+            occurrenceStart: new Date("2026-08-19T09:00:00.000Z"),
+            kind: "MOVED",
+            newStartAt: new Date("2026-08-19T13:00:00.000Z"),
+            newEndAt: new Date("2026-08-19T14:00:00.000Z"),
+          },
+        ],
+      }),
+      new Date("2026-08-17T00:00:00.000Z"),
+      new Date("2026-09-01T00:00:00.000Z")
+    );
+    expect(moved[0].startAt.toISOString()).toBe("2026-08-19T13:00:00.000Z");
+    expect(moved[0].originalStartAt?.toISOString()).toBe(
+      "2026-08-19T09:00:00.000Z"
+    );
+  });
+
+  it("rangesOverlap and vacancy occurrence helpers", () => {
+    expect(
+      rangesOverlap(
+        new Date("2026-08-19T09:00:00.000Z"),
+        new Date("2026-08-19T10:00:00.000Z"),
+        new Date("2026-08-19T09:30:00.000Z"),
+        new Date("2026-08-19T10:30:00.000Z")
+      )
+    ).toBe(true);
+    const vacancy = series({
+      id: "v1",
+      patientId: null,
+      patient: null,
+      kind: "VACANCY",
+    });
+    expect(
+      isVacancyOccurrence(
+        [vacancy],
+        "v1",
+        new Date("2026-08-19T09:00:00.000Z")
+      )
+    ).toBe(true);
+    expect(splitPersonName("Ada Lovelace")).toEqual({
+      firstName: "Ada",
+      lastName: "Lovelace",
+    });
   });
 
   it("listAppointmentsInRange queries overlapping and recurring visits", async () => {
@@ -149,9 +234,37 @@ describe("appointment-service", () => {
           },
         ],
       },
-      include: { patient: true },
+      include: { patient: true, exceptions: true },
       orderBy: { startAt: "asc" },
     });
+  });
+
+  it("findConflict reports overlapping visits and can exclude a series", async () => {
+    (prisma.appointment.findMany as ReturnType<typeof vi.fn>).mockResolvedValue(
+      [
+        {
+          ...series({
+            id: "busy",
+            startAt: new Date("2026-08-19T09:00:00.000Z"),
+            endAt: new Date("2026-08-19T10:00:00.000Z"),
+          }),
+          exceptions: [],
+        },
+      ]
+    );
+
+    const hit = await findConflict(
+      new Date("2026-08-19T09:30:00.000Z"),
+      new Date("2026-08-19T10:30:00.000Z")
+    );
+    expect(hit?.id).toBe("busy");
+
+    const skipped = await findConflict(
+      new Date("2026-08-19T09:30:00.000Z"),
+      new Date("2026-08-19T10:30:00.000Z"),
+      { excludeSeriesId: "busy" }
+    );
+    expect(skipped).toBeNull();
   });
 
   it("createAppointment stores a vacancy without a patient", async () => {

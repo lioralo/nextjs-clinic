@@ -6,7 +6,7 @@ import {
   deleteNoteAction,
   updateNoteAction,
   updatePatientAction,
-} from "@/app/[locale]/patients/actions";
+} from "@/app/[locale]/(clinic)/patients/actions";
 import {
   PATIENT_STATUSES,
   PATIENT_TYPES,

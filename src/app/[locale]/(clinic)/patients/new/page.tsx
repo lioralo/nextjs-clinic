@@ -1,4 +1,4 @@
-import { createPatientAction } from "@/app/[locale]/patients/actions";
+import { createPatientAction } from "@/app/[locale]/(clinic)/patients/actions";
 import { t, PATIENT_STATUSES, PATIENT_TYPES, statusLabel, typeLabel } from "@/lib/copy";
 
 export default async function NewPatientPage({

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { parseDateInput, startOfWeek, toDatetimeLocalValue } from "./datetime";
+import {
+  parseDateInput,
+  snapToClinicHours,
+  startOfWeek,
+  toDatetimeLocalValue,
+} from "./datetime";
 
 describe("datetime helpers", () => {
   it("formats a local datetime-local value", () => {
@@ -24,5 +29,12 @@ describe("datetime helpers", () => {
     const start = startOfWeek(wednesday, 0);
     expect(start.getDay()).toBe(0);
     expect(start.getDate()).toBe(16);
+  });
+
+  it("snapToClinicHours stays inside 08:00–19:30", () => {
+    const { start, end } = snapToClinicHours(new Date(2026, 7, 19, 21, 40), 60);
+    expect(start.getHours()).toBe(8);
+    expect(start.getDate()).toBe(20);
+    expect(end.getTime() - start.getTime()).toBe(60 * 60 * 1000);
   });
 });

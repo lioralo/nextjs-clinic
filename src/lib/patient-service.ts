@@ -53,15 +53,16 @@ export async function listCrmPatients(options: {
     },
     orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
     take: 200,
-    include: {
-      appointments: {
-        where: {
-          kind: "APPOINTMENT",
-          status: { not: "CANCELLED" },
+      include: {
+        appointments: {
+          where: {
+            kind: "APPOINTMENT",
+            status: { not: "CANCELLED" },
+          },
+          orderBy: { startAt: "asc" },
+          include: { exceptions: true },
         },
-        orderBy: { startAt: "asc" },
       },
-    },
   });
 }
 
