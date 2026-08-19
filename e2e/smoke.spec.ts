@@ -32,13 +32,12 @@ test("patient notes save and calendar week grid is visible", async ({
   await page.getByRole("link", { name: /יומני מפגש/i }).click();
 
   const notesForm = page.getByTestId("patient-notes-form");
+  const noteText = `Follow-up note from e2e ${Date.now()}`;
   await notesForm.locator('input[name="sessionNumber"]').fill("1");
-  await notesForm.locator('textarea[name="content"]').fill(
-    "Follow-up note from e2e"
-  );
+  await notesForm.locator('textarea[name="content"]').fill(noteText);
   await notesForm.getByRole("button", { name: /הוסף יומן מפגש/i }).click();
-  await expect(page.getByText("Follow-up note from e2e")).toBeVisible();
-  await expect(page.getByText(/מפגש 1/)).toBeVisible();
+  await expect(page.getByText(noteText)).toBeVisible();
+  await expect(page.getByText(/מפגש 1/).first()).toBeVisible();
 
   await page.goto("/he/calendar");
   await expect(page.getByTestId("clinic-calendar")).toBeVisible({
