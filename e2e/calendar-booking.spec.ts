@@ -1,17 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 
+import { login } from "./auth";
 import { prisma } from "../src/lib/prisma";
-
-async function login(page: Page) {
-  await page.goto("/he/login");
-  await page.locator('input[name="username"]').fill("admin");
-  await page.locator('input[name="password"]').fill("admin-password");
-  await page.getByRole("button", { name: /התחבר/i }).click();
-  await expect(page).toHaveURL(/\/he\/?$/);
-  await expect(
-    page.getByRole("heading", { name: /דשבורד|Dashboard/i })
-  ).toBeVisible();
-}
 
 async function openCalendar(page: Page) {
   await page.goto("/he/calendar");

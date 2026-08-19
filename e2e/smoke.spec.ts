@@ -1,14 +1,9 @@
 import { test, expect } from "@playwright/test";
 
+import { login } from "./auth";
+
 test("login as admin and loads seeded patients", async ({ page }) => {
-  await page.goto("/he/login");
-
-  await page.locator('input[name="username"]').fill("admin");
-  await page.locator('input[name="password"]').fill("admin-password");
-
-  await page.getByRole("button", { name: /התחבר/i }).click();
-
-  await expect(page).toHaveURL(/\/he\/?$/);
+  await login(page);
 
   await page.goto("/he/patients");
   await expect(page.getByText("Test Patient")).toBeVisible();
@@ -17,11 +12,7 @@ test("login as admin and loads seeded patients", async ({ page }) => {
 test("patient notes save and calendar week grid is visible", async ({
   page,
 }) => {
-  await page.goto("/he/login");
-  await page.locator('input[name="username"]').fill("admin");
-  await page.locator('input[name="password"]').fill("admin-password");
-  await page.getByRole("button", { name: /התחבר/i }).click();
-  await expect(page).toHaveURL(/\/he\/?$/);
+  await login(page);
 
   await page.goto("/he/patients");
   await page.getByTestId("crm-status-ongoing").click();
