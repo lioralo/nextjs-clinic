@@ -2,7 +2,7 @@
 
 The app has three surfaces that share a database and brand, but not a layout.
 
-- **Staff clinic** — App Shell with sidebar (`data-testid="clinic-sidebar"`). Roles `ADMIN` and `CLINICIAN`.
+- **Staff clinic** — App Shell with sidebar (`data-testid="clinic-sidebar"`). Below `md` the nav is an off-canvas drawer (`data-testid="open-menu"`). Roles `ADMIN` and `CLINICIAN`.
 - **Patient portal** — Separate header, no clinic sidebar. Role `PATIENT` only.
 - **Public** — Login, contact, accessibility statement, token booking. No session required.
 
@@ -16,7 +16,7 @@ Hebrew is the default. Every locale URL is `/{he|en}/...`.
 | `/{locale}/patients` | מטופלים | CRM list with status filters (all / candidate+waiting / ongoing / archived) |
 | `/{locale}/patients/new` | New patient | Create a record (`CANDIDATE` by default unless set otherwise) |
 | `/{locale}/patients/[id]` | Patient file | Demographics, portal grant, resources, calendar jumps; `?section=logs` meeting notes; `?section=care` plans and assessments |
-| `/{locale}/calendar` | יומן | Week time-grid: appointments, vacancies, blocks, group sessions; booking popup; publish public booking link |
+| `/{locale}/calendar` | יומן | Time-grid: appointments, vacancies, blocks, group sessions; **week** on desktop, **day** under 768px; booking popup (bottom sheet on phones); publish public booking link |
 | `/{locale}/cancel-requests` | בקשות ביטול | Approve or reject portal cancel requests |
 | `/{locale}/messages` | הודעות | Staff–patient threads and broadcasts |
 | `/{locale}/groups` | קבוצות | Therapy groups, members, sessions, attendance |

@@ -118,3 +118,4 @@ CI (`.github/workflows/test.yml`) does not call the runner; it repeats the same 
 - Product surfaces: [FEATURES.md](FEATURES.md)
 - Stack and data: [ARCHITECTURE.md](ARCHITECTURE.md)
 - Env vars, SMTP, general troubleshooting: [OPERATIONS.md](OPERATIONS.md)
+- Tests, Playwright, mobile, debug: [TESTING.md](TESTING.md)

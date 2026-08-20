@@ -16,6 +16,7 @@ import type {
 } from "@/lib/appointment-service";
 import { kindLabel, t } from "@/lib/copy";
 import { snapToClinicHours, toDatetimeLocalValue } from "@/lib/datetime";
+import { useNarrowScreen } from "@/hooks/use-narrow-screen";
 import type { AppLocale } from "@/lib/locale";
 
 type Props = {
@@ -132,6 +133,14 @@ export function ClinicCalendar({
     formError ? actionMessage(locale, formError) : null
   );
   const dismissedRef = useRef(false);
+  const calendarRef = useRef<FullCalendar>(null);
+  const narrow = useNarrowScreen();
+
+  useEffect(() => {
+    const api = calendarRef.current?.getApi();
+    if (!api) return;
+    api.changeView(narrow ? "timeGridDay" : "timeGridWeek");
+  }, [narrow]);
 
   useEffect(() => {
     void fetch("/api/calendar", { method: "GET", credentials: "same-origin" });
@@ -256,7 +265,7 @@ export function ClinicCalendar({
             setSelected(null);
             setPanelOpen(true);
           }}
-          className="rounded-xl bg-[var(--color-primary)] text-[var(--color-surface)] px-4 py-2 font-semibold"
+          className="min-h-11 rounded-xl bg-[var(--color-primary)] text-[var(--color-surface)] px-4 py-2 font-semibold"
         >
           {t(locale, "Book appointment", "קבע פגישה")}
         </button>
@@ -276,13 +285,22 @@ export function ClinicCalendar({
       ) : null}
       <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 overflow-x-auto">
         <FullCalendar
+          ref={calendarRef}
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-          initialView="timeGridWeek"
-          headerToolbar={{
-            left: "prev,next today",
-            center: "title",
-            right: "timeGridWeek,timeGridDay,dayGridMonth",
-          }}
+          initialView={narrow ? "timeGridDay" : "timeGridWeek"}
+          headerToolbar={
+            narrow
+              ? {
+                  start: "prev,next today",
+                  center: "title",
+                  end: "timeGridDay,timeGridWeek",
+                }
+              : {
+                  start: "prev,next today",
+                  center: "title",
+                  end: "timeGridWeek,timeGridDay,dayGridMonth",
+                }
+          }
           buttonText={{
             today: t(locale, "Today", "היום"),
             week: t(locale, "Weekly", "שבועי"),
@@ -395,7 +413,7 @@ export function ClinicCalendar({
 
       {panelOpen ? (
         <div
-          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4"
+          className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-black/40 p-0 sm:items-start sm:p-4"
           data-testid="booking-overlay"
           onClick={() => {
             dismissPanel();
@@ -406,7 +424,7 @@ export function ClinicCalendar({
             role="dialog"
             aria-modal="true"
             onClick={(event) => event.stopPropagation()}
-            className="mt-8 w-full max-w-md rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4"
+            className="mt-0 max-h-[min(92dvh,40rem)] w-full max-w-md overflow-y-auto rounded-t-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:mt-8 sm:rounded-2xl"
           >
             {error ? (
               <div

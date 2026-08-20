@@ -31,7 +31,7 @@ export function PublicBookingLinkButton({
         type="button"
         data-testid="copy-public-booking-link"
         onClick={() => setOpen(true)}
-        className="w-fit rounded-xl border border-[var(--color-border)] px-4 py-2 font-medium"
+        className="w-fit min-h-11 rounded-xl border border-[var(--color-border)] px-4 py-2 font-medium"
       >
         {t(locale, "Publish public booking", "פרסם יומן לקביעה עצמית")}
       </button>
@@ -43,7 +43,7 @@ export function PublicBookingLinkButton({
 
       {open ? (
         <div
-          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4"
+          className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-black/40 p-0 sm:items-start sm:p-4"
           data-testid="publish-overlay"
           onClick={() => setOpen(false)}
         >
@@ -52,7 +52,7 @@ export function PublicBookingLinkButton({
             action="/api/calendar"
             data-testid="publish-vacancies-form"
             onClick={(event) => event.stopPropagation()}
-            className="mt-8 w-full max-w-md rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 flex flex-col gap-3"
+            className="mt-0 flex max-h-[min(92dvh,40rem)] w-full max-w-md flex-col gap-3 overflow-y-auto rounded-t-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:mt-8 sm:rounded-2xl"
           >
             <input type="hidden" name="intent" value="publish" />
             <input type="hidden" name="locale" value={locale} />
@@ -123,11 +123,11 @@ export function PublicBookingLinkButton({
                 className="rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"
               />
             </label>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <button
                 type="submit"
                 data-testid="publish-vacancies"
-                className="rounded-xl bg-[var(--color-primary)] text-[var(--color-surface)] px-4 py-2 font-semibold"
+                className="min-h-11 rounded-xl bg-[var(--color-primary)] text-[var(--color-surface)] px-4 py-2 font-semibold"
               >
                 {t(locale, "Publish and copy link", "פרסם והעתק קישור")}
               </button>

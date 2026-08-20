@@ -42,7 +42,7 @@ export default async function PatientsPage({
   const patients = await listCrmPatients({ status, q });
 
   return (
-    <div className="max-w-6xl">
+    <div className="min-w-0 max-w-6xl">
       <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
         <div>
           <h1 className="text-2xl font-semibold mb-1">
@@ -58,7 +58,7 @@ export default async function PatientsPage({
         </div>
         <Link
           href={`/${locale}/patients/new`}
-          className="rounded-xl bg-[var(--color-primary)] text-[var(--color-surface)] px-4 py-2 font-semibold hover:opacity-90"
+          className="inline-flex min-h-11 items-center rounded-xl bg-[var(--color-primary)] text-[var(--color-surface)] px-4 py-2 font-semibold hover:opacity-90"
         >
           {t(locale, "New patient", "מטופל חדש")}
         </Link>
@@ -72,7 +72,7 @@ export default async function PatientsPage({
               key={filter.id}
               href={filterHref(locale, filter.id, q)}
               data-testid={`crm-status-${filter.id}`}
-              className={`rounded-full px-4 py-1.5 text-sm font-medium border ${
+              className={`inline-flex min-h-11 items-center rounded-full px-4 py-1.5 text-sm font-medium border ${
                 active
                   ? "bg-[var(--color-primary)] text-[var(--color-surface)] border-transparent"
                   : "border-[var(--color-border)] hover:bg-[var(--color-primary-container)]"
@@ -96,18 +96,18 @@ export default async function PatientsPage({
           name="q"
           defaultValue={q}
           placeholder={t(locale, "Name, email, or phone", "שם, אימייל או טלפון")}
-          className="min-w-64 flex-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 outline-none"
+          className="min-h-11 w-full min-w-0 flex-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 outline-none sm:min-w-64"
         />
         <button
           type="submit"
-          className="rounded-xl border border-[var(--color-border)] px-4 py-2 font-medium"
+          className="min-h-11 rounded-xl border border-[var(--color-border)] px-4 py-2 font-medium"
         >
           {t(locale, "Search", "חיפוש")}
         </button>
       </form>
 
-      <div className="rounded-2xl border bg-[var(--color-surface)] border-[var(--color-border)] overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="table-scroll rounded-2xl border bg-[var(--color-surface)] border-[var(--color-border)]">
+        <table className="w-full min-w-[36rem] text-sm">
           <thead>
             <tr className="bg-[var(--color-primary-container)]/40">
               <th className="text-start px-4 py-3 font-semibold">

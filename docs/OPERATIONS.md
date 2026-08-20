@@ -68,23 +68,16 @@ npm start
 
 ## Tests
 
+Full commands, Playwright artifacts, CI, and the **mobile** checklist: [TESTING.md](TESTING.md).
+
 ```bash
-npm test          # Vitest
-npm run e2e       # Playwright, Desktop Chrome, one worker
-npm run e2e:headed
-npm run e2e:report
-npx next build    # typecheck + compile
+npm test                 # Vitest
+npm run e2e              # Playwright (desktop Chrome + mobile.spec.ts)
+npx next build           # typecheck + compile
+npm run local:check      # unit + build
 ```
 
-GitHub Actions (`.github/workflows/test.yml`) on `main` and pull requests: migrate + seed, unit tests, Playwright, upload `playwright-report` and `test-results` (screenshots and video).
-
-Playwright starts `npm run dev` unless something already listens on `:3000` (`reuseExistingServer` when `CI` is unset). If e2e hangs on login:
-
-1. Confirm seed ran and `admin` exists.
-2. Confirm `NEXTAUTH_SECRET` matches the running server.
-3. The login helper polls for a `session-token` cookie and retries (dev compile race).
-
-Useful test ids: `login-form`, `clinic-sidebar`, `logout`, `clinic-logo`, `clinic-calendar`, `contact-form`, `patient-home`.
+If e2e hangs on login: confirm seed + `NEXTAUTH_SECRET`, then see [TESTING.md](TESTING.md#playwright-hangs-on-login).
 
 ## Debugging checklist
 
@@ -95,7 +88,8 @@ Useful test ids: `login-form`, `clinic-sidebar`, `logout`, `clinic-logo`, `clini
 | Calendar empty / mutations 401 | Not logged in as staff; CSRF | `e2e/auth.ts` cookie poll; POST `/api/calendar` |
 | Duplicate FullCalendar keys | Recurring ids | Events must use `${id}__${iso}` from `toCalendarEvent` |
 | Hebrew font looks like Latin | `dir` not on `<html>` | `x-locale` header; View Source `html lang dir` |
-| Sidebar missing on mobile | Drawer closed | Hamburger in top bar; `clinic-sidebar` is off-canvas until open |
+| Sidebar missing on mobile | Drawer closed | Hamburger (`open-menu`) in the top bar; `clinic-sidebar` is off-canvas until open |
+| Phone layout pans sideways | Wide table / calendar | `.table-scroll`; calendar day view under 768px; see [TESTING.md](TESTING.md#phone-viewport) |
 | Mail never arrives | SMTP unset | Expected: `[mail skip]` in server logs |
 | Contact form “works” but staff list empty | Different DB file | Same `DATABASE_URL` for seed, dev, and e2e |
 | TOTP rejected | Clock / recovery | 6 digits, 30s window; recovery codes are one-time hashes |
@@ -106,9 +100,11 @@ Server logs: Next dev terminal. Prisma warns in development. Mail errors print `
 
 ## Layout / RTL debug
 
+See the mobile/RTL checklist in [TESTING.md](TESTING.md#layout--rtl--mobile). Short path:
+
 1. `/he/login` — `html[lang=he][dir=rtl]`, Heebo, logo (`clinic-logo`).
 2. Staff dashboard — sidebar on the **right**, active nav on לוח הבקרה.
-3. Narrow viewport — menu button, overlay, drawer from the right, Escape closes.
+3. Narrow viewport — `open-menu`, overlay, drawer from the right, Escape closes.
 4. Locale toggle — `/he/patients` ↔ `/en/patients`.
 
 ## Security notes for operators
