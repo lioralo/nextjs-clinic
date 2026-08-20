@@ -12,6 +12,7 @@ datasource db {
 enum UserRole {
   ADMIN
   CLINICIAN
+  PATIENT
 }
 
 enum AppointmentStatus {
@@ -50,19 +51,54 @@ enum RecurrenceExceptionKind {
   MOVED
 }
 
+enum CancelRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum GroupSessionStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+enum AttendanceStatus {
+  PENDING
+  PRESENT
+  MISSED
+}
+
+enum NotificationCategory {
+  SYSTEM
+  ADMIN_BROADCAST
+  APPOINTMENT
+  CANCEL
+  RESOURCE
+}
+
 model User {
-  id           String   @id @default(cuid())
-  username     String   @unique
-  passwordHash String
-  role         UserRole @default(ADMIN)
+  id                  String   @id @default(cuid())
+  username            String   @unique
+  passwordHash        String
+  role                UserRole @default(ADMIN)
+  email               String?
+  isActive            Boolean  @default(true)
+  forcePasswordChange Boolean  @default(false)
+  patientId           String?  @unique
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  patient            Patient?            @relation("PortalAccount", fields: [patientId], references: [id])
   patientsOwned      Patient[]           @relation("PatientOwner")
   appointments       Appointment[]       @relation("ProviderAppointments")
   notesAuthored      Note[]              @relation("NoteAuthors")
   publicBookingLinks PublicBookingLink[]
+  cancelReviews      CancelRequest[]     @relation("CancelReviewer")
+  messagesSent       Message[]           @relation("MessageSender")
+  messagesReceived   Message[]           @relation("MessageRecipient")
+  notifications      Notification[]
 }
 
 model Patient {
@@ -76,8 +112,9 @@ model Patient {
   birthDate DateTime?
   idNumber  String?
 
-  status      PatientStatus @default(CANDIDATE)
-  patientType PatientType   @default(PRIVATE)
+  status               PatientStatus @default(CANDIDATE)
+  patientType          PatientType   @default(PRIVATE)
+  reminderEmailEnabled Boolean       @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -85,8 +122,13 @@ model Patient {
   ownerId String?
   owner   User?   @relation("PatientOwner", fields: [ownerId], references: [id])
 
-  appointments Appointment[]
-  notes        Note[]
+  portalUser       User?             @relation("PortalAccount")
+  appointments     Appointment[]
+  notes            Note[]
+  cancelRequests   CancelRequest[]
+  groupMemberships GroupMember[]
+  attendance       GroupAttendance[]
+  assignedResources PatientResource[]
 }
 
 model Appointment {
@@ -104,21 +146,23 @@ model Appointment {
   meetingType MeetingType @default(IN_PERSON)
   meetingLink String?
 
-  isRecurring              Boolean   @default(false)
-  recurrenceIntervalWeeks  Int?
-  recurrenceEndDate        DateTime?
-  recurrenceGroupId        String?
+  isRecurring             Boolean   @default(false)
+  recurrenceIntervalWeeks Int?
+  recurrenceEndDate       DateTime?
+  recurrenceGroupId       String?
+  reminderSentAt          DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  patient    Patient?               @relation(fields: [patientId], references: [id], onDelete: SetNull)
-  provider   User                   @relation("ProviderAppointments", fields: [providerId], references: [id])
-  exceptions RecurrenceException[]
+  patient        Patient?              @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  provider       User                  @relation("ProviderAppointments", fields: [providerId], references: [id])
+  exceptions     RecurrenceException[]
+  cancelRequests CancelRequest[]
 }
 
 model RecurrenceException {
-  id              String                   @id @default(cuid())
+  id              String                  @id @default(cuid())
   appointmentId   String
   occurrenceStart DateTime
   kind            RecurrenceExceptionKind
@@ -149,14 +193,132 @@ model Note {
   patientId String
   authorId  String
 
-  content       String
-  sessionNumber Int?
-  noteDate      DateTime?
-  keyTopics     String?
+  content          String
+  sessionNumber    Int?
+  noteDate         DateTime?
+  keyTopics        String?
+  shareWithPatient Boolean   @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   patient Patient @relation(fields: [patientId], references: [id])
   author  User    @relation("NoteAuthors", fields: [authorId], references: [id])
+}
+
+model CancelRequest {
+  id              String              @id @default(cuid())
+  appointmentId   String
+  patientId       String
+  reason          String
+  status          CancelRequestStatus @default(PENDING)
+  occurrenceStart DateTime?
+  reviewedById    String?
+  reviewedAt      DateTime?
+  createdAt       DateTime            @default(now())
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  patient     Patient     @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  reviewedBy  User?       @relation("CancelReviewer", fields: [reviewedById], references: [id])
+}
+
+model Message {
+  id          String    @id @default(cuid())
+  senderId    String
+  recipientId String
+  body        String
+  readAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  sender    User @relation("MessageSender", fields: [senderId], references: [id])
+  recipient User @relation("MessageRecipient", fields: [recipientId], references: [id])
+}
+
+model Notification {
+  id              String               @id @default(cuid())
+  recipientUserId String
+  title           String
+  body            String
+  category        NotificationCategory @default(SYSTEM)
+  readAt          DateTime?
+  createdAt       DateTime             @default(now())
+
+  recipient User @relation(fields: [recipientUserId], references: [id], onDelete: Cascade)
+}
+
+model TherapyGroup {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  isActive    Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members  GroupMember[]
+  sessions GroupSession[]
+}
+
+model GroupMember {
+  id        String    @id @default(cuid())
+  groupId   String
+  patientId String
+  leftAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  group   TherapyGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  patient Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, patientId])
+}
+
+model GroupSession {
+  id        String             @id @default(cuid())
+  groupId   String
+  startAt   DateTime
+  endAt     DateTime
+  status    GroupSessionStatus @default(SCHEDULED)
+  summary   String?
+  createdAt DateTime           @default(now())
+
+  group      TherapyGroup       @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  attendance GroupAttendance[]
+}
+
+model GroupAttendance {
+  id        String           @id @default(cuid())
+  sessionId String
+  patientId String
+  status    AttendanceStatus @default(PENDING)
+  note      String?
+
+  session GroupSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  patient Patient      @relation(fields: [patientId], references: [id])
+
+  @@unique([sessionId, patientId])
+}
+
+model Resource {
+  id                    String   @id @default(cuid())
+  title                 String
+  description           String?
+  url                   String
+  isPublic              Boolean  @default(false)
+  allowPatientView      Boolean  @default(true)
+  allowPatientDownload  Boolean  @default(true)
+  notifyOnAssign        Boolean  @default(true)
+  createdAt             DateTime @default(now())
+
+  assignments PatientResource[]
+}
+
+model PatientResource {
+  patientId  String
+  resourceId String
+  assignedAt DateTime @default(now())
+
+  patient  Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  resource Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@id([patientId, resourceId])
 }

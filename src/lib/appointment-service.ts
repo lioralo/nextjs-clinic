@@ -17,7 +17,7 @@ export type CalendarEventDTO = {
   title: string;
   start: string;
   end: string;
-  kind: AppointmentKind;
+  kind: AppointmentKind | "GROUP";
   isRecurring: boolean;
   meetingType: MeetingType;
   meetingLink: string | null;

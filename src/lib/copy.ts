@@ -56,6 +56,8 @@ export function kindLabel(locale: AppLocale, kind: string) {
       return t(locale, "Vacant Slot", "משבצת פנויה");
     case "BLOCK":
       return t(locale, "Blocked", "חסום");
+    case "GROUP":
+      return t(locale, "Group session", "מפגש קבוצה");
     default:
       return t(locale, "Appointment", "פגישה");
   }

@@ -3,7 +3,10 @@ import { notFound } from "next/navigation";
 
 import {
   addNoteAction,
+  assignResourceAction,
   deleteNoteAction,
+  grantPortalAction,
+  unassignResourceAction,
   updateNoteAction,
   updatePatientAction,
 } from "@/app/[locale]/(clinic)/patients/actions";
@@ -25,26 +28,37 @@ import {
   listPatientAppointments,
   toCalendarEvent,
 } from "@/lib/appointment-service";
+import { listPatientResources, listResources } from "@/lib/resource-service";
 
 export default async function PatientDetailPage({
   params,
   searchParams,
 }: {
   params: Promise<{ locale: "en" | "he"; id: string }>;
-  searchParams: Promise<{ section?: string; editNote?: string }>;
+  searchParams: Promise<{
+    section?: string;
+    editNote?: string;
+    portalUser?: string;
+    tempPassword?: string;
+    portalError?: string;
+  }>;
 }) {
   const { locale, id } = await params;
-  const { section, editNote } = await searchParams;
+  const { section, editNote, portalUser, tempPassword, portalError } =
+    await searchParams;
   const activeSection = section === "logs" ? "logs" : "info";
 
   const patient = await getPatient(id);
   if (!patient) notFound();
 
-  const [notes, suggestedSession, meetings] = await Promise.all([
-    listNotes(patient.id),
-    nextSessionNumber(patient.id),
-    listPatientAppointments(patient.id),
-  ]);
+  const [notes, suggestedSession, meetings, resources, assigned] =
+    await Promise.all([
+      listNotes(patient.id),
+      nextSessionNumber(patient.id),
+      listPatientAppointments(patient.id),
+      listResources(),
+      listPatientResources(patient.id),
+    ]);
   const savePatient = updatePatientAction.bind(null, locale, patient.id);
   const saveNote = addNoteAction.bind(null, locale, patient.id);
   const editing = notes.find((note) => note.id === editNote);
@@ -201,6 +215,16 @@ export default async function PatientDetailPage({
             />
           </label>
 
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              name="reminderEmailEnabled"
+              value="1"
+              defaultChecked={patient.reminderEmailEnabled}
+            />
+            {t(locale, "Email reminders", "תזכורות במייל")}
+          </label>
+
           <div>
             <button
               type="submit"
@@ -210,6 +234,101 @@ export default async function PatientDetailPage({
             </button>
           </div>
         </form>
+        <section className="mt-4 rounded-2xl border bg-[var(--color-surface)] border-[var(--color-border)] p-5">
+          <h2 className="text-lg font-semibold mb-2">
+            {t(locale, "Portal access", "גישת פורטל")}
+          </h2>
+          {patient.portalUser ? (
+            <p className="text-sm mb-2">
+              {t(locale, "Username", "שם משתמש")}: {patient.portalUser.username}
+            </p>
+          ) : (
+            <p className="text-sm text-[var(--color-foreground)]/70 mb-2">
+              {t(locale, "No portal user yet.", "אין עדיין משתמש פורטל.")}
+            </p>
+          )}
+          {portalUser ? (
+            <p className="text-sm mb-2" data-testid="portal-credentials">
+              {portalUser}
+              {tempPassword ? ` / ${tempPassword}` : ""}
+            </p>
+          ) : null}
+          {portalError ? (
+            <p className="text-sm text-[var(--color-primary-dark)]">{portalError}</p>
+          ) : null}
+          <form
+            action={grantPortalAction.bind(null, locale, patient.id)}
+            className="flex flex-col gap-2"
+          >
+            <input
+              name="username"
+              defaultValue={patient.portalUser?.username ?? ""}
+              placeholder={t(locale, "Username", "שם משתמש")}
+              className="rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"
+            />
+            <input
+              name="email"
+              type="email"
+              defaultValue={patient.email ?? ""}
+              placeholder={t(locale, "Email", "אימייל")}
+              className="rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"
+            />
+            <button
+              type="submit"
+              data-testid="grant-portal"
+              className="rounded-xl bg-[var(--color-primary)] text-[var(--color-surface)] px-4 py-2 font-semibold"
+            >
+              {t(locale, "Grant portal access", "הענק גישת פורטל")}
+            </button>
+          </form>
+        </section>
+        <section className="mt-4 rounded-2xl border bg-[var(--color-surface)] border-[var(--color-border)] p-5">
+          <h2 className="text-lg font-semibold mb-2">
+            {t(locale, "Assigned resources", "משאבים משויכים")}
+          </h2>
+          <form
+            action={assignResourceAction.bind(null, locale, patient.id)}
+            className="mb-3 flex gap-2"
+          >
+            <select
+              name="resourceId"
+              data-testid="assign-resource"
+              className="flex-1 rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"
+            >
+              {resources.map((resource) => (
+                <option key={resource.id} value={resource.id}>
+                  {resource.title}
+                </option>
+              ))}
+            </select>
+            <button
+              type="submit"
+              data-testid="assign-resource-submit"
+              className="rounded-xl border border-[var(--color-border)] px-4 py-2"
+            >
+              {t(locale, "Assign", "שייך")}
+            </button>
+          </form>
+          <ul className="flex flex-col gap-2">
+            {assigned.map((row) => (
+              <li key={row.resourceId} className="flex items-center justify-between">
+                <span>{row.resource.title}</span>
+                <form
+                  action={unassignResourceAction.bind(
+                    null,
+                    locale,
+                    patient.id,
+                    row.resourceId
+                  )}
+                >
+                  <button type="submit" className="text-sm hover:underline">
+                    {t(locale, "Remove", "הסר")}
+                  </button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        </section>
         <section
           data-testid="patient-meetings"
           className="mt-4 rounded-2xl border bg-[var(--color-surface)] border-[var(--color-border)] p-5"
@@ -312,6 +431,15 @@ export default async function PatientDetailPage({
                 defaultValue={editing?.content ?? ""}
                 className="min-h-24 rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"
               />
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                name="shareWithPatient"
+                value="1"
+                defaultChecked={editing?.shareWithPatient}
+              />
+              {t(locale, "Share with patient", "שתף עם המטופל")}
             </label>
             <div className="flex gap-2">
               <button

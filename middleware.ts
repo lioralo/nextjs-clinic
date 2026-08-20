@@ -2,7 +2,14 @@ import { getToken } from "next-auth/jwt";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const protectedPrefixes = ["/patients", "/calendar"];
+const staffPrefixes = [
+  "/patients",
+  "/calendar",
+  "/cancel-requests",
+  "/messages",
+  "/groups",
+  "/resources",
+];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -14,23 +21,24 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Allow access to auth + Next.js internals.
   if (
     pathname === `/${locale}/login` ||
     pathname.startsWith(`/${locale}/login`) ||
     pathname.startsWith(`/${locale}/api/auth`) ||
     pathname.startsWith("/_next") ||
-    pathname.startsWith("/favicon")
+    pathname.startsWith("/favicon") ||
+    pathname.startsWith("/api/resources")
   ) {
     return NextResponse.next();
   }
 
-  const isProtected =
+  const isStaff =
     pathname === `/${locale}` ||
     pathname === `/${locale}/` ||
-    protectedPrefixes.some((p) => pathname.startsWith(`/${locale}${p}`));
+    staffPrefixes.some((p) => pathname.startsWith(`/${locale}${p}`));
+  const isPatient = pathname.startsWith(`/${locale}/patient`);
 
-  if (!isProtected) return NextResponse.next();
+  if (!isStaff && !isPatient) return NextResponse.next();
 
   const token = await getToken({
     req,
@@ -40,12 +48,19 @@ export async function middleware(req: NextRequest) {
     (typeof token?.id === "string" && token.id) ||
     (typeof token?.sub === "string" && token.sub) ||
     null;
+  const role = typeof token?.role === "string" ? token.role : null;
 
   if (!userId) {
-    const loginUrl = new URL(`/${locale}/login`, req.url);
-    return NextResponse.redirect(loginUrl);
+    return NextResponse.redirect(new URL(`/${locale}/login`, req.url));
+  }
+
+  if (isPatient && role !== "PATIENT") {
+    return NextResponse.redirect(new URL(`/${locale}`, req.url));
+  }
+
+  if (isStaff && role === "PATIENT") {
+    return NextResponse.redirect(new URL(`/${locale}/patient`, req.url));
   }
 
   return NextResponse.next();
 }
-

@@ -5,6 +5,10 @@ import {
   toCalendarEvent,
 } from "@/lib/appointment-service";
 import { t } from "@/lib/copy";
+import {
+  listGroupSessionsInRange,
+  toGroupCalendarEvent,
+} from "@/lib/group-service";
 import { listPatients } from "@/lib/patient-service";
 
 export default async function CalendarPage({
@@ -28,9 +32,10 @@ export default async function CalendarPage({
   const rangeEnd = new Date(now);
   rangeEnd.setMonth(rangeEnd.getMonth() + 6);
 
-  const [patients, appointments] = await Promise.all([
+  const [patients, appointments, groupSessions] = await Promise.all([
     listPatients(),
     listAppointmentsInRange(rangeStart, rangeEnd),
+    listGroupSessionsInRange(rangeStart, rangeEnd),
   ]);
 
   return (
@@ -60,7 +65,10 @@ export default async function CalendarPage({
           status: patient.status,
           patientType: patient.patientType,
         }))}
-        appointments={appointments.map(toCalendarEvent)}
+        appointments={[
+          ...appointments.map(toCalendarEvent),
+          ...groupSessions.map(toGroupCalendarEvent),
+        ]}
       />
     </div>
   );

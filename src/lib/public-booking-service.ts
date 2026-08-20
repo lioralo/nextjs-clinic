@@ -1,5 +1,7 @@
 import { randomBytes } from "node:crypto";
 
+import { notifyStaff } from "./messaging-service";
+import { sendMail } from "./mail";
 import { createPatient } from "./patient-service";
 import { prisma } from "./prisma";
 import {
@@ -122,6 +124,19 @@ export async function bookPublicVacancy(input: {
   });
   if (!occupied.ok) {
     return occupied;
+  }
+
+  await notifyStaff({
+    title: "Public booking",
+    body: `${parsed.name} booked a vacancy.`,
+    category: "APPOINTMENT",
+  });
+  if (parsed.email) {
+    await sendMail({
+      to: parsed.email,
+      subject: "Booking received",
+      text: "Your clinic booking was received.",
+    });
   }
 
   return { ok: true as const, patientId: patient.id };

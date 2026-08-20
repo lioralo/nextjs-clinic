@@ -14,6 +14,7 @@ import {
 import { parseDateInput, nextDateTimeOnWeekday } from "@/lib/datetime";
 import { normalizeLocale } from "@/lib/locale";
 import { prisma } from "@/lib/prisma";
+import { requestCancel } from "@/lib/cancel-service";
 import { ensurePublicBookingLink } from "@/lib/public-booking-service";
 import { revalidateClinic } from "@/lib/revalidate";
 
@@ -329,6 +330,23 @@ export async function applyCalendarIntent(
       vacancyEventId: String(formData.get("vacancyEventId") ?? ""),
       patientId: String(formData.get("patientId") ?? ""),
     });
+  }
+
+  if (intent === "cancel") {
+    const parsed = parseEventId(String(formData.get("appointmentId") ?? ""));
+    if (!parsed.seriesId) return { ok: false, error: "invalid" };
+    const appointment = await prisma.appointment.findUnique({
+      where: { id: parsed.seriesId },
+    });
+    if (!appointment?.patientId) return { ok: false, error: "invalid" };
+    const result = await requestCancel({
+      appointmentId: appointment.id,
+      patientId: appointment.patientId,
+      reason: String(formData.get("reason") ?? ""),
+      occurrenceStart: parsed.occurrenceStart,
+    });
+    if (!result.ok) return { ok: false, error: result.error };
+    return { ok: true, id: result.id };
   }
 
   if (intent === "delete") {

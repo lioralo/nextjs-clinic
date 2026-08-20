@@ -103,7 +103,8 @@ pre {
   color: #0f172a !important;
 }
 
-.clinic-calendar .fc-patient-focus {
-  box-shadow: 0 0 0 2px var(--color-tertiary);
+.clinic-calendar .fc-kind-group {
+  background-color: var(--color-tertiary) !important;
+  border-color: var(--color-tertiary) !important;
 }
 

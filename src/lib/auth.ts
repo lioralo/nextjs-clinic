@@ -21,7 +21,7 @@ export const authOptions: NextAuthOptions = {
         if (!username || !password) return null;
 
         const user = await prisma.user.findUnique({ where: { username } });
-        if (!user) return null;
+        if (!user || !user.isActive) return null;
 
         const ok = await bcrypt.compare(password, user.passwordHash);
         if (!ok) return null;
@@ -30,6 +30,8 @@ export const authOptions: NextAuthOptions = {
           id: user.id,
           username: user.username,
           role: user.role,
+          patientId: user.patientId,
+          forcePasswordChange: user.forcePasswordChange,
         };
       },
     }),
@@ -37,10 +39,18 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        const u = user as unknown as { id: string; username: string; role: string };
+        const u = user as unknown as {
+          id: string;
+          username: string;
+          role: string;
+          patientId?: string | null;
+          forcePasswordChange?: boolean;
+        };
         token.id = u.id;
         token.username = u.username;
         token.role = u.role;
+        token.patientId = u.patientId ?? null;
+        token.forcePasswordChange = Boolean(u.forcePasswordChange);
       }
       return token;
     },
@@ -49,6 +59,10 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).id = (token as any).id;
         (session.user as any).username = (token as any).username;
         (session.user as any).role = (token as any).role;
+        (session.user as any).patientId = (token as any).patientId ?? null;
+        (session.user as any).forcePasswordChange = Boolean(
+          (token as any).forcePasswordChange
+        );
       }
       return session;
     },

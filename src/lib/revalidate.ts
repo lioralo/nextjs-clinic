@@ -7,6 +7,11 @@ export function revalidateClinic(patientId?: string) {
     revalidatePath(`/${locale}`);
     revalidatePath(`/${locale}/patients`);
     revalidatePath(`/${locale}/calendar`);
+    revalidatePath(`/${locale}/cancel-requests`);
+    revalidatePath(`/${locale}/messages`);
+    revalidatePath(`/${locale}/groups`);
+    revalidatePath(`/${locale}/resources`);
+    revalidatePath(`/${locale}/patient`);
     if (patientId) {
       revalidatePath(`/${locale}/patients/${patientId}`);
     }

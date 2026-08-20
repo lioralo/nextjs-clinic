@@ -325,7 +325,9 @@ export function ClinicCalendar({
               start: range.start.toISOString(),
               end: range.end.toISOString(),
               kind:
-                kind === "VACANCY" || kind === "BLOCK" ? kind : "APPOINTMENT",
+                kind === "VACANCY" || kind === "BLOCK" || kind === "GROUP"
+                  ? kind
+                  : "APPOINTMENT",
               isRecurring: Boolean(info.event.extendedProps.isRecurring),
               meetingType:
                 info.event.extendedProps.meetingType === "ONLINE"
@@ -409,7 +411,14 @@ export function ClinicCalendar({
                 : ""}
             </p>
 
-            {selected.kind === "VACANCY" ? (
+            {selected.kind === "GROUP" ? (
+              <Link
+                href={`/${locale}/groups/${selected.seriesId}`}
+                className="rounded-xl border border-[var(--color-border)] px-4 py-2 text-center"
+              >
+                {t(locale, "Open group", "פתח קבוצה")}
+              </Link>
+            ) : selected.kind === "VACANCY" ? (
               <form method="post" action="/api/calendar" className="flex flex-col gap-3">
                 <input type="hidden" name="intent" value="occupy" />
                 <input type="hidden" name="locale" value={locale} />
@@ -520,6 +529,30 @@ export function ClinicCalendar({
               </form>
             )}
 
+            {selected.kind === "APPOINTMENT" && selected.patientId ? (
+              <form method="post" action="/api/calendar" className="flex flex-col gap-2">
+                <input type="hidden" name="intent" value="cancel" />
+                <input type="hidden" name="locale" value={locale} />
+                <input type="hidden" name="appointmentId" value={selected.id} />
+                <label className="flex flex-col gap-1 text-sm">
+                  {t(locale, "Cancel reason", "סיבת ביטול")}
+                  <textarea
+                    name="reason"
+                    required
+                    data-testid="cancel-reason"
+                    className="min-h-16 rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"
+                  />
+                </label>
+                <button
+                  type="submit"
+                  data-testid="request-cancel"
+                  className="rounded-xl border border-[var(--color-border)] px-4 py-2"
+                >
+                  {t(locale, "Request cancellation", "בקש ביטול")}
+                </button>
+              </form>
+            ) : null}
+
             <div className="flex flex-col gap-2">
               {selected.patientId ? (
                 <Link
@@ -529,7 +562,7 @@ export function ClinicCalendar({
                   {t(locale, "Open Patient Profile", "פתח פרופיל מטופל")}
                 </Link>
               ) : null}
-              {selected.isRecurring ? (
+              {selected.kind === "GROUP" ? null : selected.isRecurring ? (
                 <>
                   <form
                     method="post"

@@ -17,5 +17,8 @@ export default async function ClinicLayout({
   if (!user) {
     redirect(`/${locale}/login`);
   }
+  if (user.role === "PATIENT") {
+    redirect(`/${locale}/patient`);
+  }
   return <AppShell locale={locale}>{children}</AppShell>;
 }

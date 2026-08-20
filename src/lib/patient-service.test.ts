@@ -122,6 +122,7 @@ describe("patient-service (CRUD wrappers)", () => {
 
     expect(prisma.patient.findUnique).toHaveBeenCalledWith({
       where: { id: "p1" },
+      include: { portalUser: true },
     });
     expect(result).toEqual({ id: "p1" });
   });
@@ -181,6 +182,7 @@ describe("patient-service (CRUD wrappers)", () => {
         patientType: "PRIVATE",
         birthDate: null,
         idNumber: null,
+        reminderEmailEnabled: undefined,
       },
     });
   });
@@ -224,6 +226,7 @@ describe("patient-service (CRUD wrappers)", () => {
         sessionNumber: 2,
         noteDate,
         keyTopics: "sleep",
+        shareWithPatient: false,
       },
     });
   });

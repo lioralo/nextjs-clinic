@@ -13,6 +13,8 @@ export type SessionUser = {
   id: string;
   username?: string;
   role?: string;
+  patientId?: string | null;
+  forcePasswordChange?: boolean;
 };
 
 function userFromToken(token: {
@@ -20,6 +22,8 @@ function userFromToken(token: {
   sub?: unknown;
   username?: unknown;
   role?: unknown;
+  patientId?: unknown;
+  forcePasswordChange?: unknown;
 } | null): SessionUser | null {
   const id = typeof token?.id === "string" ? token.id : token?.sub;
   if (typeof id !== "string" || !id) return null;
@@ -27,6 +31,9 @@ function userFromToken(token: {
     id,
     username: typeof token?.username === "string" ? token.username : undefined,
     role: typeof token?.role === "string" ? token.role : undefined,
+    patientId:
+      typeof token?.patientId === "string" ? token.patientId : null,
+    forcePasswordChange: Boolean(token?.forcePasswordChange),
   };
 }
 
@@ -77,6 +84,10 @@ export async function getSessionUser(): Promise<SessionUser | null> {
       id: user.id,
       username: user.username,
       role: user.role,
+      patientId: (user as { patientId?: string | null }).patientId ?? null,
+      forcePasswordChange: Boolean(
+        (user as { forcePasswordChange?: boolean }).forcePasswordChange
+      ),
     };
   }
 

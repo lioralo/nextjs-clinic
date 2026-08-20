@@ -69,6 +69,7 @@ export async function listCrmPatients(options: {
 export async function getPatient(id: string) {
   return prisma.patient.findUnique({
     where: { id },
+    include: { portalUser: true },
   });
 }
 
@@ -110,6 +111,7 @@ export async function updatePatient(
     patientType?: PatientType;
     birthDate?: Date | null;
     idNumber?: string | null;
+    reminderEmailEnabled?: boolean;
   }
 ) {
   return prisma.patient.update({
@@ -124,6 +126,7 @@ export async function updatePatient(
       patientType: data.patientType,
       birthDate: data.birthDate ?? null,
       idNumber: data.idNumber ?? null,
+      reminderEmailEnabled: data.reminderEmailEnabled,
     },
   });
 }
@@ -156,6 +159,7 @@ export async function addNote(data: {
   sessionNumber?: number | null;
   noteDate?: Date | null;
   keyTopics?: string | null;
+  shareWithPatient?: boolean;
 }) {
   return prisma.note.create({
     data: {
@@ -165,6 +169,7 @@ export async function addNote(data: {
       sessionNumber: data.sessionNumber ?? null,
       noteDate: data.noteDate ?? null,
       keyTopics: data.keyTopics ?? null,
+      shareWithPatient: Boolean(data.shareWithPatient),
     },
   });
 }
@@ -176,6 +181,7 @@ export async function updateNote(
     sessionNumber?: number | null;
     noteDate?: Date | null;
     keyTopics?: string | null;
+    shareWithPatient?: boolean;
   }
 ) {
   return prisma.note.update({
@@ -185,6 +191,7 @@ export async function updateNote(
       sessionNumber: data.sessionNumber ?? null,
       noteDate: data.noteDate ?? null,
       keyTopics: data.keyTopics ?? null,
+      shareWithPatient: Boolean(data.shareWithPatient),
     },
   });
 }

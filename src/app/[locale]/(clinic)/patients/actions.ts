@@ -102,6 +102,9 @@ export async function updatePatientAction(
   const status = parseStatus(String(formData.get("status") ?? ""));
   const patientType = parseType(String(formData.get("patientType") ?? ""));
 
+  const reminderEmailEnabled =
+    String(formData.get("reminderEmailEnabled") ?? "") === "1";
+
   if (!patientId || !firstName || !lastName) {
     redirect(`/${loc}/patients/${patientId}`);
   }
@@ -116,6 +119,7 @@ export async function updatePatientAction(
     patientType,
     birthDate,
     idNumber,
+    reminderEmailEnabled,
   });
 
   revalidateClinic(patientId);
@@ -133,6 +137,7 @@ export async function addNoteAction(
     String(formData.get("sessionNumber") ?? "")
   );
   const noteDate = parseDateInput(String(formData.get("noteDate") ?? ""));
+  const shareWithPatient = String(formData.get("shareWithPatient") ?? "") === "1";
   const user = await getSessionUser();
   if (!user) {
     redirect(`/${loc}/login`);
@@ -149,6 +154,7 @@ export async function addNoteAction(
     keyTopics,
     sessionNumber,
     noteDate,
+    shareWithPatient,
   });
 
   revalidateClinic(patientId);
@@ -167,6 +173,7 @@ export async function updateNoteAction(
     String(formData.get("sessionNumber") ?? "")
   );
   const noteDate = parseDateInput(String(formData.get("noteDate") ?? ""));
+  const shareWithPatient = String(formData.get("shareWithPatient") ?? "") === "1";
   const user = await getSessionUser();
   if (!user) {
     redirect(`/${loc}/login`);
@@ -180,6 +187,7 @@ export async function updateNoteAction(
     keyTopics,
     sessionNumber,
     noteDate,
+    shareWithPatient,
   });
   revalidateClinic(patientId);
 }
@@ -199,4 +207,54 @@ export async function deleteNoteAction(
   }
   await deleteNote(noteId);
   revalidateClinic(patientId);
+}
+
+export async function grantPortalAction(
+  locale: string,
+  patientId: string,
+  formData: FormData
+) {
+  const loc = normalizeLocale(locale) ?? "he";
+  const user = await getSessionUser();
+  if (!user || user.role === "PATIENT") redirect(`/${loc}/login`);
+  const { grantPortalAccess } = await import("@/lib/portal-service");
+  const result = await grantPortalAccess({
+    patientId,
+    username: String(formData.get("username") ?? ""),
+    email: String(formData.get("email") ?? "") || null,
+  });
+  const params = new URLSearchParams();
+  if (result.ok) {
+    params.set("portalUser", result.username);
+    params.set("tempPassword", result.tempPassword);
+  } else {
+    params.set("portalError", result.error);
+  }
+  redirect(`/${loc}/patients/${patientId}?${params.toString()}`);
+}
+
+export async function assignResourceAction(
+  locale: string,
+  patientId: string,
+  formData: FormData
+) {
+  const loc = normalizeLocale(locale) ?? "he";
+  const user = await getSessionUser();
+  if (!user || user.role === "PATIENT") redirect(`/${loc}/login`);
+  const { assignResource } = await import("@/lib/resource-service");
+  await assignResource(patientId, String(formData.get("resourceId") ?? ""));
+  redirect(`/${loc}/patients/${patientId}`);
+}
+
+export async function unassignResourceAction(
+  locale: string,
+  patientId: string,
+  resourceId: string
+) {
+  const loc = normalizeLocale(locale) ?? "he";
+  const user = await getSessionUser();
+  if (!user || user.role === "PATIENT") redirect(`/${loc}/login`);
+  const { unassignResource } = await import("@/lib/resource-service");
+  await unassignResource(patientId, resourceId);
+  redirect(`/${loc}/patients/${patientId}`);
 }

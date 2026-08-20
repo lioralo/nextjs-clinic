@@ -35,6 +35,19 @@ export function LoginForm({ locale }: { locale: AppLocale }) {
       return;
     }
 
+    const sessionRes = await fetch("/api/auth/session");
+    const session = (await sessionRes.json()) as {
+      user?: { role?: string; forcePasswordChange?: boolean };
+    };
+    if (session.user?.role === "PATIENT") {
+      router.push(
+        session.user.forcePasswordChange
+          ? `/${locale}/patient/change-password`
+          : `/${locale}/patient`
+      );
+      return;
+    }
+
     router.push(`/${locale}`);
   }
 

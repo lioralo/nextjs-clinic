@@ -43,6 +43,30 @@ export default function AppShell({
               >
                 {locale === "he" ? "יומן" : "Calendar"}
               </Link>
+              <Link
+                className="rounded-xl px-3 py-2 hover:bg-[var(--color-primary-container)] hover:text-[var(--color-primary)]"
+                href={`/${locale}/cancel-requests`}
+              >
+                {locale === "he" ? "בקשות ביטול" : "Cancel requests"}
+              </Link>
+              <Link
+                className="rounded-xl px-3 py-2 hover:bg-[var(--color-primary-container)] hover:text-[var(--color-primary)]"
+                href={`/${locale}/messages`}
+              >
+                {locale === "he" ? "הודעות" : "Messages"}
+              </Link>
+              <Link
+                className="rounded-xl px-3 py-2 hover:bg-[var(--color-primary-container)] hover:text-[var(--color-primary)]"
+                href={`/${locale}/groups`}
+              >
+                {locale === "he" ? "קבוצות" : "Groups"}
+              </Link>
+              <Link
+                className="rounded-xl px-3 py-2 hover:bg-[var(--color-primary-container)] hover:text-[var(--color-primary)]"
+                href={`/${locale}/resources`}
+              >
+                {locale === "he" ? "משאבים" : "Resources"}
+              </Link>
             </nav>
           </div>
         </aside>
