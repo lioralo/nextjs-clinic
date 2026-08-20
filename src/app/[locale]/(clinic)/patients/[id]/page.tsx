@@ -92,7 +92,7 @@ export default async function PatientDetailPage({
       <div className="mb-4 flex flex-wrap gap-2">
         <Link
           href={`/${locale}/patients/${patient.id}`}
-          className={`inline-flex min-h-11 items-center rounded-full px-4 py-1.5 text-sm font-medium border ${}
+          className={`inline-flex min-h-11 items-center rounded-full px-4 py-1.5 text-sm font-medium border ${
             activeSection === "info"
               ? "bg-[var(--color-primary)] text-[var(--color-surface)] border-transparent"
               : "border-[var(--color-border)]"
@@ -102,7 +102,7 @@ export default async function PatientDetailPage({
         </Link>
         <Link
           href={`/${locale}/patients/${patient.id}?section=logs`}
-          className={`inline-flex min-h-11 items-center rounded-full px-4 py-1.5 text-sm font-medium border ${}
+          className={`inline-flex min-h-11 items-center rounded-full px-4 py-1.5 text-sm font-medium border ${
             activeSection === "logs"
               ? "bg-[var(--color-primary)] text-[var(--color-surface)] border-transparent"
               : "border-[var(--color-border)]"
@@ -112,7 +112,7 @@ export default async function PatientDetailPage({
         </Link>
         <Link
           href={`/${locale}/patients/${patient.id}?section=care`}
-          className={`inline-flex min-h-11 items-center rounded-full px-4 py-1.5 text-sm font-medium border ${}
+          className={`inline-flex min-h-11 items-center rounded-full px-4 py-1.5 text-sm font-medium border ${
             activeSection === "care"
               ? "bg-[var(--color-primary)] text-[var(--color-surface)] border-transparent"
               : "border-[var(--color-border)]"
