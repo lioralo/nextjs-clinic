@@ -55,7 +55,7 @@ test("staff create resource, assign it, and patient can download", async ({
   await page.getByTestId("resource-url").fill("https://example.com/worksheet.pdf");
   await page.getByTestId("create-resource").click();
   await expect(page.getByTestId("resource-title")).toHaveValue("");
-  await expect(page.getByDisplayValue(title)).toBeVisible();
+  await expect(page.locator(`input[name="title"][value="${title}"]`)).toBeVisible();
 
   await page.goto("/he/patients");
   await page.getByTestId("crm-status-ongoing").click();
