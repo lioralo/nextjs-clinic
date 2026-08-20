@@ -62,6 +62,8 @@ Middleware duplicates the role split so deep links cannot skip the layout guards
 
 Locale is also forwarded as `x-locale` so the root layout can set `<html lang dir>` (Next.js allows a single root `<html>`).
 
+Narrow screens (`max-width: 767px`): App Shell uses a hamburger (`open-menu`) and an off-canvas sidebar; `useNarrowScreen` switches the calendar to `timeGridDay`. Root `viewport` in `src/app/layout.tsx` is `device-width` with `viewportFit: cover` (do not disable user scaling).
+
 ## Server vs client
 
 - **Server Components** load Prisma in `src/lib/*-service.ts` and render pages.
@@ -148,17 +150,19 @@ Do not set `letter-spacing` on Hebrew text.
 
 [`ClinicBrand`](../src/components/clinic-brand.tsx) loads `/logo.png`. Favicons: `public/favicon.ico`, `icon-192x192.png`, `icon-512x512.png`, `apple-touch-icon.png`. Metadata icons are declared in [`src/app/layout.tsx`](../src/app/layout.tsx).
 
-Keep e2e hooks: `clinic-sidebar`, `login-form`, `logout`, `clinic-logo` (large login mark).
-
 ## Local development
 
 Day-to-day: `npm run local` ([LOCAL-RUNNER.md](LOCAL-RUNNER.md)). That fast-forwards the current git branch, `npm install`s, runs `prisma migrate deploy`, seeds, and starts Next.js. Creating a new Prisma migration still uses `npm run db:migrate`.
 
 ## Testing layout
 
+See [TESTING.md](TESTING.md).
+
 - Unit: `src/lib/*.test.ts` via Vitest (`npm test`).
-- E2E: `e2e/*.spec.ts` — smoke (logo + CRM), calendar booking, portal ops, clinical/contact/2FA. Playwright `webServer` runs `npm run dev` on port 3000.
+- E2E: `e2e/*.spec.ts` — smoke, calendar booking, portal ops, clinical/contact/2FA, plus `mobile.spec.ts` (iPhone 13 viewport). Playwright `webServer` runs `npm run dev` on port 3000.
 - Login helper [`e2e/auth.ts`](../e2e/auth.ts) retries until the NextAuth `session-token` cookie exists (first compile can complete UI login without persisting the cookie).
+
+Keep e2e hooks: `clinic-sidebar`, `open-menu`, `login-form`, `logout`, `clinic-logo` (large login mark).
 
 ## Next.js 16 notes
 

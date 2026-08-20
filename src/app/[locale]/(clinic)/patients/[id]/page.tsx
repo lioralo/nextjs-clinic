@@ -71,7 +71,7 @@ export default async function PatientDetailPage({
 
   return (
     <div className="max-w-3xl">
-      <div className="mb-4 flex items-start justify-between gap-3">
+      <div className="mb-4 flex items-start justify-between gap-3 flex-wrap">
         <div>
           <h1 className="text-2xl font-semibold mb-1">
             {patient.firstName} {patient.lastName}
@@ -83,16 +83,16 @@ export default async function PatientDetailPage({
         </div>
         <Link
           href={`/${locale}/patients`}
-          className="rounded-xl border border-[var(--color-border)] px-4 py-2"
+          className="inline-flex min-h-11 items-center rounded-xl border border-[var(--color-border)] px-4 py-2"
         >
           {t(locale, "Back to Patients", "חזרה למטופלים")}
         </Link>
       </div>
 
-      <div className="mb-4 flex gap-2">
+      <div className="mb-4 flex flex-wrap gap-2">
         <Link
           href={`/${locale}/patients/${patient.id}`}
-          className={`rounded-full px-4 py-1.5 text-sm font-medium border ${
+          className={`inline-flex min-h-11 items-center rounded-full px-4 py-1.5 text-sm font-medium border ${}
             activeSection === "info"
               ? "bg-[var(--color-primary)] text-[var(--color-surface)] border-transparent"
               : "border-[var(--color-border)]"
@@ -102,7 +102,7 @@ export default async function PatientDetailPage({
         </Link>
         <Link
           href={`/${locale}/patients/${patient.id}?section=logs`}
-          className={`rounded-full px-4 py-1.5 text-sm font-medium border ${
+          className={`inline-flex min-h-11 items-center rounded-full px-4 py-1.5 text-sm font-medium border ${}
             activeSection === "logs"
               ? "bg-[var(--color-primary)] text-[var(--color-surface)] border-transparent"
               : "border-[var(--color-border)]"
@@ -112,7 +112,7 @@ export default async function PatientDetailPage({
         </Link>
         <Link
           href={`/${locale}/patients/${patient.id}?section=care`}
-          className={`rounded-full px-4 py-1.5 text-sm font-medium border ${
+          className={`inline-flex min-h-11 items-center rounded-full px-4 py-1.5 text-sm font-medium border ${}
             activeSection === "care"
               ? "bg-[var(--color-primary)] text-[var(--color-surface)] border-transparent"
               : "border-[var(--color-border)]"

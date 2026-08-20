@@ -62,6 +62,11 @@ export default function AppShell({
   }, [pathname]);
 
   useEffect(() => {
+    document.documentElement.classList.toggle("nav-open", menuOpen);
+    return () => document.documentElement.classList.remove("nav-open");
+  }, [menuOpen]);
+
+  useEffect(() => {
     if (!menuOpen) return;
     function onKey(event: KeyboardEvent) {
       if (event.key === "Escape") setMenuOpen(false);
@@ -148,12 +153,13 @@ export default function AppShell({
         <div className="flex min-w-0 flex-1 flex-col">
           <header
             role="banner"
-            className="sticky top-0 z-20 flex min-h-[var(--admin-topbar-height)] items-center justify-between gap-3 bg-[var(--color-surface)]/90 px-4 py-2 backdrop-blur"
+            className="sticky top-0 z-20 flex min-h-[var(--admin-topbar-height)] flex-wrap items-center justify-between gap-3 bg-[var(--color-surface)]/90 px-4 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] backdrop-blur"
             style={{ borderBlockEnd: "1px solid var(--color-border)" }}
           >
             <div className="flex min-w-0 items-center gap-2">
               <button
                 type="button"
+                data-testid="open-menu"
                 className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl md:hidden"
                 aria-expanded={menuOpen}
                 aria-controls={navId}
@@ -175,7 +181,7 @@ export default function AppShell({
                 />
               </div>
               <div className="min-w-0">
-                <div className="text-sm text-[var(--color-foreground)]/70">
+                <div className="hidden text-sm text-[var(--color-foreground)]/70 sm:block">
                   {t(locale, "Hello", "שלום")}
                 </div>
                 <div className="truncate text-lg font-semibold">{title}</div>
@@ -194,7 +200,7 @@ export default function AppShell({
           <main
             id="main-content"
             tabIndex={-1}
-            className="flex-1 p-4 outline-none"
+            className="flex-1 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] outline-none"
           >
             {children}
           </main>

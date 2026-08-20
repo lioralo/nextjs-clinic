@@ -14,7 +14,7 @@ export function LogoutButton({
       type="button"
       data-testid="logout"
       onClick={() => void signOut({ callbackUrl: `/${locale}/login` })}
-      className="inline-flex min-h-11 items-center rounded-full border px-4 text-sm font-medium"
+      className="inline-flex min-h-11 shrink-0 items-center rounded-full border px-3 text-sm font-medium sm:px-4"
       style={{ borderColor: "var(--color-border)" }}
     >
       {label}

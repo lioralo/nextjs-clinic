@@ -64,6 +64,19 @@ body {
   color: var(--color-foreground);
   font-family: var(--font-sans);
   scrollbar-gutter: stable;
+  overflow-x: clip;
+  max-width: 100%;
+}
+
+html {
+  overflow-x: clip;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+html.nav-open,
+html.nav-open body {
+  overflow: hidden;
 }
 
 html:dir(rtl) body,
@@ -130,6 +143,25 @@ button:not(:disabled) {
   cursor: pointer;
 }
 
+a,
+button {
+  touch-action: manipulation;
+}
+
+input,
+select,
+button,
+textarea {
+  font-size: 1rem;
+}
+
+input[type="datetime-local"],
+input[type="date"],
+input[type="time"] {
+  max-width: 100%;
+  min-width: 0;
+}
+
 input,
 select {
   min-height: 2.75rem;
@@ -137,6 +169,19 @@ select {
 
 textarea {
   min-height: 7rem;
+}
+
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+}
+
+.safe-pad {
+  padding-top: max(0.5rem, env(safe-area-inset-top));
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  padding-inline-start: max(1rem, env(safe-area-inset-left));
+  padding-inline-end: max(1rem, env(safe-area-inset-right));
 }
 
 .icon-directional:dir(rtl),
@@ -166,9 +211,29 @@ textarea {
   --fc-now-indicator-color: var(--color-tertiary);
 }
 
+.clinic-calendar .fc .fc-toolbar {
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 .clinic-calendar .fc .fc-toolbar-title {
   font-size: 1.1rem;
   font-weight: 600;
+}
+
+@media (max-width: 767px) {
+  .clinic-calendar .fc .fc-toolbar.fc-header-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .clinic-calendar .fc .fc-toolbar-title {
+    font-size: 1rem;
+  }
+
+  .clinic-calendar .fc .fc-button {
+    min-height: 2.75rem;
+  }
 }
 
 .clinic-calendar .fc .fc-button {

@@ -21,13 +21,13 @@ export default async function PublicLayout({
       <SkipLink locale={locale} />
       <header
         role="banner"
-        className="px-4 py-3"
+        className="px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]"
         style={{ borderBlockEnd: "1px solid var(--color-border)" }}
       >
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <ClinicBrand locale={locale} href={`/${locale}/login`} />
           <nav
-            className="flex items-center gap-2"
+            className="flex flex-wrap items-center justify-end gap-2"
             aria-label={t(locale, "Public navigation", "ניווט ציבורי")}
           >
             <a
@@ -46,7 +46,11 @@ export default async function PublicLayout({
           </nav>
         </div>
       </header>
-      <main id="main-content" tabIndex={-1} className="flex-1 p-4 outline-none">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="flex-1 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] outline-none"
+      >
         {children}
       </main>
       <SiteFooter locale={locale} />

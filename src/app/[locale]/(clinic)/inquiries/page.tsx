@@ -37,7 +37,7 @@ export default async function InquiriesPage({
                   : ` · ${t(locale, "Unread", "לא נקראה")}`}
               </div>
               <p className="mt-2 whitespace-pre-wrap">{inquiry.message}</p>
-              <div className="mt-3 flex gap-2">
+              <div className="mt-3 flex flex-wrap gap-2">
                 {!inquiry.readAt ? (
                   <form action={markInquiryReadAction.bind(null, locale, inquiry.id)}>
                     <button
