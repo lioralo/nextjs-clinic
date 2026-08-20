@@ -20,6 +20,14 @@ async function openBookingPanel(page: Page) {
   await expect(page.getByTestId("booking-panel")).toBeVisible();
 }
 
+async function closeBookingPanel(page: Page) {
+  if (!(await page.getByTestId("booking-panel").isVisible().catch(() => false))) {
+    return;
+  }
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("booking-panel")).toHaveCount(0);
+}
+
 function localInput(date: Date) {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(
@@ -81,7 +89,13 @@ test.beforeAll(async () => {
 test("unauthenticated staff routes show a standalone login page", async ({
   page,
 }) => {
-  await page.goto("/he");
+  await page.request.get("/api/auth/csrf");
+  await page.request.get("/api/auth/session");
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    await page.context().clearCookies();
+    await page.goto("/he");
+    if (/\/he\/login/.test(page.url())) break;
+  }
   await expect(page).toHaveURL(/\/he\/login/);
   await expect(page.getByTestId("login-page")).toBeVisible();
   await expect(page.getByTestId("login-form")).toBeVisible();
@@ -115,6 +129,7 @@ test("overlapping vacancy is rejected and a vacancy can be occupied", async ({
   await page.getByTestId("create-booking").click();
   await expect(page.getByTestId("calendar-error")).toBeVisible();
 
+  await closeBookingPanel(page);
   await page
     .locator(".fc-event")
     .filter({ hasText: "E2E Vacancy Occupy" })
