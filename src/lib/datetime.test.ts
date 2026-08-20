@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  formatDate,
+  formatDateTime,
   parseDateInput,
   snapToClinicHours,
   startOfWeek,
@@ -12,6 +14,15 @@ describe("datetime helpers", () => {
   it("formats a local datetime-local value", () => {
     const d = new Date(2026, 7, 19, 9, 30);
     expect(toDatetimeLocalValue(d)).toBe("2026-08-19T09:30");
+  });
+
+  it("formats Israeli dates as day-month-year without AM/PM", () => {
+    const d = new Date(2026, 7, 19, 14, 5);
+    expect(formatDate(d, "he")).toMatch(/19/);
+    expect(formatDate(d, "he")).toMatch(/08|8/);
+    expect(formatDate(d, "he")).toContain("2026");
+    expect(formatDateTime(d, "he")).toMatch(/14/);
+    expect(formatDateTime(d, "he")).not.toMatch(/AM|PM/i);
   });
 
   it("parses a valid date string", () => {

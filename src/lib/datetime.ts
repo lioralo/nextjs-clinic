@@ -1,5 +1,33 @@
 const pad = (n: number) => String(n).padStart(2, "0");
 
+/** Israeli DD/MM/YYYY 24h clock. Isolate the result with dir="ltr" in Hebrew copy. */
+export function formatDateTime(date: Date, locale: "he" | "en" = "he") {
+  return new Intl.DateTimeFormat(locale === "he" ? "he-IL" : "en-GB", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(date);
+}
+
+export function formatTime(date: Date, locale: "he" | "en" = "he") {
+  return new Intl.DateTimeFormat(locale === "he" ? "he-IL" : "en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(date);
+}
+
+export function formatDate(date: Date, locale: "he" | "en" = "he") {
+  return new Intl.DateTimeFormat(locale === "he" ? "he-IL" : "en-GB", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(date);
+}
+
 export function toDatetimeLocalValue(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
     d.getHours()

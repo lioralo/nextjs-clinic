@@ -16,7 +16,7 @@ export async function login(page: Page) {
     await page.getByRole("button", { name: /התחבר/i }).click();
     await expect(page).toHaveURL(/\/he\/?$/);
     await expect(
-      page.getByRole("heading", { name: /דשבורד|Dashboard/i })
+      page.getByRole("heading", { name: /לוח הבקרה|Dashboard/i })
     ).toBeVisible();
     try {
       await expect.poll(() => hasSessionCookie(page), { timeout: 8_000 }).toBeTruthy();

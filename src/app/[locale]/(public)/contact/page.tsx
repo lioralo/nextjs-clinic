@@ -15,22 +15,22 @@ export default async function ContactPage({
   return (
     <div className="mx-auto max-w-lg" data-testid="contact-page">
       <h1 className="text-2xl font-semibold mb-1">
-        {t(locale, "Contact the clinic", "יצירת קשר עם הקליניקה")}
+        {t(locale, "Contact the clinic", "יצירת קשר")}
       </h1>
       <p className="mb-4 text-[var(--color-foreground)]/70">
         {t(
           locale,
-          "Leave a message and the clinic will follow up.",
-          "השאירו הודעה והקליניקה תחזור אליכם."
+          "Leave a message and the clinic will get back to you.",
+          "השאירו הודעה. נחזור אליכם."
         )}
       </p>
       {query.sent ? (
-        <p className="mb-4" data-testid="contact-success">
+        <p className="mb-4" data-testid="contact-success" role="status">
           {t(locale, "Message received. Thank you.", "ההודעה התקבלה. תודה.")}
         </p>
       ) : null}
       {query.error ? (
-        <p className="mb-4 text-[var(--color-primary-dark)]">
+        <p className="mb-4 text-[var(--color-primary-dark)]" role="alert">
           {query.error === "contact"
             ? t(locale, "Email or phone is required.", "נדרש אימייל או טלפון.")
             : t(locale, "Name and message are required.", "נדרשים שם והודעה.")}
@@ -41,39 +41,56 @@ export default async function ContactPage({
         data-testid="contact-form"
         className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 flex flex-col gap-3"
       >
-        <input
-          name="name"
-          required
-          data-testid="contact-name"
-          placeholder={t(locale, "Name", "שם")}
-          className="rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"
-        />
-        <input
-          name="email"
-          type="email"
-          data-testid="contact-email"
-          placeholder={t(locale, "Email", "אימייל")}
-          className="rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"
-        />
-        <input
-          name="phone"
-          data-testid="contact-phone"
-          placeholder={t(locale, "Phone", "טלפון")}
-          className="rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"
-        />
-        <textarea
-          name="message"
-          required
-          data-testid="contact-message"
-          placeholder={t(locale, "Message", "הודעה")}
-          className="min-h-28 rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"
-        />
+        <label className="flex flex-col gap-1 text-sm" htmlFor="contact-name">
+          {t(locale, "Name", "שם")}
+          <input
+            id="contact-name"
+            name="name"
+            required
+            dir="auto"
+            data-testid="contact-name"
+            className="rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-sm" htmlFor="contact-email">
+          {t(locale, "Email", "אימייל")}
+          <input
+            id="contact-email"
+            name="email"
+            type="email"
+            dir="ltr"
+            data-testid="contact-email"
+            className="rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-sm" htmlFor="contact-phone">
+          {t(locale, "Phone", "טלפון")}
+          <input
+            id="contact-phone"
+            name="phone"
+            dir="ltr"
+            inputMode="tel"
+            data-testid="contact-phone"
+            className="rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-sm" htmlFor="contact-message">
+          {t(locale, "Message", "הודעה")}
+          <textarea
+            id="contact-message"
+            name="message"
+            required
+            dir="auto"
+            data-testid="contact-message"
+            className="min-h-28 rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"
+          />
+        </label>
         <button
           type="submit"
           data-testid="contact-submit"
-          className="rounded-xl bg-[var(--color-primary)] text-[var(--color-surface)] px-4 py-2 font-semibold"
+          className="min-h-11 rounded-xl bg-[var(--color-primary)] text-[var(--color-surface)] px-4 py-2 font-semibold"
         >
-          {t(locale, "Send", "שלח")}
+          {t(locale, "Send", "שליחה")}
         </button>
       </form>
     </div>

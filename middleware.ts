@@ -13,14 +13,23 @@ const staffPrefixes = [
   "/inquiries",
 ];
 
+function nextWithLocale(req: NextRequest, locale: string) {
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set("x-locale", locale);
+  return NextResponse.next({
+    request: { headers: requestHeaders },
+  });
+}
+
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   const parts = pathname.split("/");
-  const locale = parts[1];
+  const locale = parts[1] === "en" || parts[1] === "he" ? parts[1] : "he";
+  const pass = () => nextWithLocale(req, locale);
 
-  if (locale !== "he" && locale !== "en") {
-    return NextResponse.next();
+  if (parts[1] !== "he" && parts[1] !== "en") {
+    return pass();
   }
 
   if (
@@ -31,7 +40,7 @@ export async function middleware(req: NextRequest) {
     pathname.startsWith("/favicon") ||
     pathname.startsWith("/api/resources")
   ) {
-    return NextResponse.next();
+    return pass();
   }
 
   const isStaff =
@@ -40,7 +49,7 @@ export async function middleware(req: NextRequest) {
     staffPrefixes.some((p) => pathname.startsWith(`/${locale}${p}`));
   const isPatient = pathname.startsWith(`/${locale}/patient`);
 
-  if (!isStaff && !isPatient) return NextResponse.next();
+  if (!isStaff && !isPatient) return pass();
 
   const token = await getToken({
     req,
@@ -64,5 +73,5 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL(`/${locale}/patient`, req.url));
   }
 
-  return NextResponse.next();
+  return pass();
 }

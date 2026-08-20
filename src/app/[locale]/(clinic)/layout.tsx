@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 
 import AppShell from "@/components/app-shell";
@@ -8,7 +9,7 @@ export default async function ClinicLayout({
   children,
   params,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
   params: Promise<{ locale: string }>;
 }) {
   const { locale: rawLocale } = await params;

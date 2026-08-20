@@ -2,6 +2,14 @@ import { test, expect } from "@playwright/test";
 
 import { login } from "./auth";
 
+test("login page shows the clinic logo", async ({ page }) => {
+  await page.goto("/he/login");
+  await expect(page.getByTestId("clinic-logo")).toBeVisible();
+  await expect(page.getByTestId("login-form")).toBeVisible();
+  await expect(page.locator("html")).toHaveAttribute("lang", "he");
+  await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+});
+
 test("login as admin and loads seeded patients", async ({ page }) => {
   await login(page);
 

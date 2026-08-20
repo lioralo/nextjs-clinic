@@ -6,6 +6,7 @@ import {
   toCalendarEvent,
 } from "@/lib/appointment-service";
 import { t } from "@/lib/copy";
+import { formatDateTime, formatTime } from "@/lib/datetime";
 import { getActivePublicBookingLink } from "@/lib/public-booking-service";
 
 export default async function PublicBookPage({
@@ -103,12 +104,9 @@ export default async function PublicBookPage({
                   />
                   <span>
                     <span className="font-medium">{slot.title}</span>
-                    <span className="block text-sm text-[var(--color-foreground)]/70">
-                      {new Date(slot.start).toLocaleString(locale)} –{" "}
-                      {new Date(slot.end).toLocaleTimeString(locale, {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                    <span className="block text-sm text-[var(--color-foreground)]/70" dir="ltr">
+                      {formatDateTime(new Date(slot.start), locale)} –{" "}
+                      {formatTime(new Date(slot.end), locale)}
                     </span>
                   </span>
                 </label>
@@ -121,6 +119,7 @@ export default async function PublicBookPage({
             <input
               name="name"
               required
+              dir="auto"
               className="rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"
             />
           </label>
@@ -128,6 +127,8 @@ export default async function PublicBookPage({
             {t(locale, "Phone", "טלפון")}
             <input
               name="phone"
+              dir="ltr"
+              inputMode="tel"
               className="rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"
             />
           </label>
@@ -136,6 +137,7 @@ export default async function PublicBookPage({
             <input
               name="email"
               type="email"
+              dir="ltr"
               className="rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"
             />
           </label>
@@ -151,6 +153,7 @@ export default async function PublicBookPage({
             {t(locale, "Notes", "הערות")}
             <textarea
               name="notes"
+              dir="auto"
               className="min-h-20 rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"
             />
           </label>

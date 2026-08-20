@@ -1,6 +1,7 @@
 import { sendDueAppointmentReminders } from "@/lib/cancel-service";
 import { countPendingCancelRequests } from "@/lib/cancel-service";
 import { t } from "@/lib/copy";
+import { formatDateTime } from "@/lib/datetime";
 import { listAppointmentsInRange } from "@/lib/appointment-service";
 import { prisma } from "@/lib/prisma";
 
@@ -39,7 +40,7 @@ export default async function DashboardPage({
   return (
     <div className="max-w-3xl">
       <h1 className="text-2xl font-semibold mb-2">
-        {t(locale, "Dashboard", "דשבורד")}
+        {t(locale, "Dashboard", "לוח הבקרה")}
       </h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -96,8 +97,8 @@ export default async function DashboardPage({
                     ? `${a.patient.firstName} ${a.patient.lastName}`
                     : a.title?.trim() || t(locale, "Appointment", "פגישה")}
                 </div>
-                <div className="text-sm text-[var(--color-foreground)]/70">
-                  {a.startAt.toLocaleString(locale)}
+                <div className="text-sm text-[var(--color-foreground)]/70" dir="ltr">
+                  {formatDateTime(a.startAt, locale)}
                 </div>
               </li>
             ))}
@@ -125,8 +126,8 @@ export default async function DashboardPage({
                     ? `${a.patient.firstName} ${a.patient.lastName}`
                     : a.title?.trim() || t(locale, "Appointment", "פגישה")}
                 </div>
-                <div className="text-sm text-[var(--color-foreground)]/70">
-                  {a.startAt.toLocaleString()}
+                <div className="text-sm text-[var(--color-foreground)]/70" dir="ltr">
+                  {formatDateTime(a.startAt, locale)}
                 </div>
               </li>
             ))}

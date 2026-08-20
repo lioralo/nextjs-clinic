@@ -1,7 +1,12 @@
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 
+import { ClinicBrand } from "@/components/clinic-brand";
+import { LocaleToggle } from "@/components/locale-toggle";
 import { LogoutButton } from "@/components/logout-button";
+import { SiteFooter } from "@/components/site-footer";
+import { SkipLink } from "@/components/skip-link";
+import { t } from "@/lib/copy";
 import { normalizeLocale } from "@/lib/locale";
 import { getPortalPatient } from "@/lib/portal-service";
 import { getSessionUser } from "@/lib/session";
@@ -23,25 +28,42 @@ export default async function PortalLayout({
   if (!portal) redirect(`/${locale}/login`);
 
   return (
-    <div className="min-h-screen bg-[var(--color-background)] text-[var(--color-foreground)]">
+    <div className="flex min-h-screen flex-col bg-[var(--color-background)] text-[var(--color-foreground)]">
+      <SkipLink locale={locale} />
       <header
-        className="flex items-center justify-between px-4 py-3"
-        style={{ borderBottom: "1px solid var(--color-border)" }}
+        role="banner"
+        className="flex items-center justify-between gap-3 px-4 py-3"
+        style={{ borderBlockEnd: "1px solid var(--color-border)" }}
       >
-        <div>
-          <div className="text-sm text-[var(--color-foreground)]/70">
-            {locale === "he" ? "פורטל מטופל" : "Patient portal"}
-          </div>
-          <div className="text-lg font-semibold">
-            {portal.patient.firstName} {portal.patient.lastName}
+        <div className="flex min-w-0 items-center gap-3">
+          <ClinicBrand
+            locale={locale}
+            href={`/${locale}/patient`}
+            showName={false}
+          />
+          <div className="min-w-0">
+            <div className="text-sm text-[var(--color-foreground)]/70">
+              {t(locale, "Patient portal", "פורטל מטופל")}
+            </div>
+            <div className="truncate text-lg font-semibold">
+              <bdi>
+                {portal.patient.firstName} {portal.patient.lastName}
+              </bdi>
+            </div>
           </div>
         </div>
-        <LogoutButton
-          locale={locale}
-          label={locale === "he" ? "התנתק" : "Log out"}
-        />
+        <div className="flex items-center gap-2">
+          <LocaleToggle locale={locale} />
+          <LogoutButton
+            locale={locale}
+            label={t(locale, "Log out", "יציאה")}
+          />
+        </div>
       </header>
-      <main className="p-4">{children}</main>
+      <main id="main-content" tabIndex={-1} className="flex-1 p-4 outline-none">
+        {children}
+      </main>
+      <SiteFooter locale={locale} />
     </div>
   );
 }

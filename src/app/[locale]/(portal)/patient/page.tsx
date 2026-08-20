@@ -7,6 +7,7 @@ import {
 } from "@/app/[locale]/(portal)/patient/actions";
 import { listPatientAppointments } from "@/lib/appointment-service";
 import { t } from "@/lib/copy";
+import { formatDateTime } from "@/lib/datetime";
 import { listPatientGroupSessions } from "@/lib/group-service";
 import {
   getPrimaryStaffUser,
@@ -77,7 +78,7 @@ export default async function PatientHomePage({
           <ul className="flex flex-col gap-3">
             {upcoming.map((meeting) => (
               <li key={meeting.id} className="rounded-xl border border-[var(--color-border)] p-3">
-                <div>{meeting.startAt.toLocaleString(locale)}</div>
+                <div dir="ltr">{formatDateTime(meeting.startAt, locale)}</div>
                 <form
                   action={patientRequestCancelAction.bind(
                     null,
@@ -123,7 +124,8 @@ export default async function PatientHomePage({
           <ul className="flex flex-col gap-2">
             {groups.map((session) => (
               <li key={session.id}>
-                {session.group.name} · {session.startAt.toLocaleString(locale)}
+                {session.group.name} ·{" "}
+                <span dir="ltr">{formatDateTime(session.startAt, locale)}</span>
               </li>
             ))}
           </ul>

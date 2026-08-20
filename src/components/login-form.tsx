@@ -4,6 +4,7 @@ import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
+import { t } from "@/lib/copy";
 import type { AppLocale } from "@/lib/locale";
 
 export function LoginForm({ locale }: { locale: AppLocale }) {
@@ -24,13 +25,13 @@ export function LoginForm({ locale }: { locale: AppLocale }) {
     });
     if (!res?.ok) {
       setError(
-        locale === "he"
-          ? needsTotp
-            ? "קוד אימות לא תקין."
-            : "פרטי התחברות לא נכונים."
-          : needsTotp
-            ? "Invalid authentication code."
-            : "Invalid username or password."
+        needsTotp
+          ? t(locale, "The authentication code is incorrect.", "קוד האימות שגוי.")
+          : t(
+              locale,
+              "Username or password is incorrect.",
+              "שם המשתמש או הסיסמה שגויים."
+            )
       );
       return false;
     }
@@ -69,9 +70,11 @@ export function LoginForm({ locale }: { locale: AppLocale }) {
       if (!result.ok) {
         setSubmitting(false);
         setError(
-          locale === "he"
-            ? "פרטי התחברות לא נכונים."
-            : "Invalid username or password."
+          t(
+            locale,
+            "Username or password is incorrect.",
+            "שם המשתמש או הסיסמה שגויים."
+          )
         );
         return;
       }
@@ -89,16 +92,20 @@ export function LoginForm({ locale }: { locale: AppLocale }) {
   return (
     <>
       <h1 className="text-2xl font-semibold mb-2">
-        {locale === "he" ? "התחברות" : "Login"}
+        {t(locale, "Sign in", "כניסה")}
       </h1>
       <p className="text-[var(--color-foreground)]/70 mb-4">
         {needsTotp
-          ? locale === "he"
-            ? "הזינו את קוד היישומון או קוד שחזור."
-            : "Enter the authenticator or recovery code."
-          : locale === "he"
-            ? "היכנס/י למערכת עם שם משתמש וסיסמה."
-            : "Sign in with your username and password."}
+          ? t(
+              locale,
+              "Enter the authenticator or recovery code.",
+              "יש להזין את קוד היישומון או קוד השחזור."
+            )
+          : t(
+              locale,
+              "Enter a username and password to continue.",
+              "יש להזין שם משתמש וסיסמה כדי להמשיך."
+            )}
       </p>
 
       <form
@@ -106,10 +113,12 @@ export function LoginForm({ locale }: { locale: AppLocale }) {
         data-testid="login-form"
         className="rounded-2xl border p-4 border-[var(--color-border)] bg-[var(--color-surface)] flex flex-col gap-3"
       >
-        <label className="flex flex-col gap-1 text-sm">
-          {locale === "he" ? "שם משתמש" : "Username"}
+        <label className="flex flex-col gap-1 text-sm" htmlFor="username">
+          {t(locale, "Username", "שם משתמש")}
           <input
+            id="username"
             name="username"
+            dir="auto"
             className="rounded-xl border px-3 py-2 border-[var(--color-border)] bg-transparent outline-none"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
@@ -118,11 +127,13 @@ export function LoginForm({ locale }: { locale: AppLocale }) {
           />
         </label>
 
-        <label className="flex flex-col gap-1 text-sm">
-          {locale === "he" ? "סיסמה" : "Password"}
+        <label className="flex flex-col gap-1 text-sm" htmlFor="password">
+          {t(locale, "Password", "סיסמה")}
           <input
+            id="password"
             name="password"
             type="password"
+            dir="ltr"
             className="rounded-xl border px-3 py-2 border-[var(--color-border)] bg-transparent outline-none"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -132,11 +143,13 @@ export function LoginForm({ locale }: { locale: AppLocale }) {
         </label>
 
         {needsTotp ? (
-          <label className="flex flex-col gap-1 text-sm">
-            {locale === "he" ? "קוד אימות" : "Authentication code"}
+          <label className="flex flex-col gap-1 text-sm" htmlFor="otp">
+            {t(locale, "Authentication code", "קוד אימות")}
             <input
+              id="otp"
               name="otp"
               data-testid="otp-code"
+              dir="ltr"
               className="rounded-xl border px-3 py-2 border-[var(--color-border)] bg-transparent outline-none"
               value={otp}
               onChange={(e) => setOtp(e.target.value)}
@@ -147,21 +160,19 @@ export function LoginForm({ locale }: { locale: AppLocale }) {
         ) : null}
 
         {error ? (
-          <div className="text-sm text-[var(--color-primary-dark)]">{error}</div>
+          <div role="alert" className="text-sm text-[var(--color-primary-dark)]">
+            {error}
+          </div>
         ) : null}
 
         <button
           type="submit"
           disabled={submitting}
-          className="rounded-xl bg-[var(--color-primary)] text-[var(--color-surface)] py-2 px-3 font-semibold hover:opacity-90 disabled:opacity-60"
+          className="min-h-11 rounded-xl bg-[var(--color-primary)] text-[var(--color-surface)] py-2 px-3 font-semibold hover:opacity-90 disabled:opacity-60"
         >
           {submitting
-            ? locale === "he"
-              ? "מתחבר..."
-              : "Signing in..."
-            : locale === "he"
-              ? "התחבר"
-              : "Sign in"}
+            ? t(locale, "Signing in...", "מתחברים...")
+            : t(locale, "Sign in", "התחבר")}
         </button>
       </form>
     </>
