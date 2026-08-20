@@ -37,6 +37,27 @@ describe("resource ACL", () => {
     ).resolves.toMatchObject({ ok: true });
   });
 
+  it("allows an assigned patient to download when flags are on", async () => {
+    mocks.findUnique.mockResolvedValue({
+      id: "r1",
+      url: "https://example.com/file",
+      allowPatientView: true,
+      allowPatientDownload: true,
+      isPublic: false,
+    });
+    mocks.findUniqueAssign.mockResolvedValue({
+      patientId: "pat1",
+      resourceId: "r1",
+    });
+    await expect(
+      canAccessResource({
+        resourceId: "r1",
+        action: "download",
+        user: { id: "p1", role: "PATIENT", patientId: "pat1" },
+      })
+    ).resolves.toMatchObject({ ok: true });
+  });
+
   it("denies patient download when the flag is off", async () => {
     mocks.findUnique.mockResolvedValue({
       id: "r1",

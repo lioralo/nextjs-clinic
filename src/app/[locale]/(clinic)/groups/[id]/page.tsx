@@ -111,6 +111,7 @@ export default async function GroupDetailPage({
           {group.sessions.map((session) => (
             <li
               key={session.id}
+              data-testid="group-session-row"
               className="rounded-xl border border-[var(--color-border)] p-3"
             >
               <div className="font-medium">
