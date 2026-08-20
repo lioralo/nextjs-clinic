@@ -21,11 +21,12 @@ async function openBookingPanel(page: Page) {
 }
 
 async function closeBookingPanel(page: Page) {
-  if (!(await page.getByTestId("booking-panel").isVisible().catch(() => false))) {
+  const panel = page.getByTestId("booking-panel");
+  if (!(await panel.isVisible().catch(() => false))) {
     return;
   }
-  await page.keyboard.press("Escape");
-  await expect(page.getByTestId("booking-panel")).toHaveCount(0);
+  await panel.getByRole("button", { name: /סגור|Close/ }).click();
+  await expect(panel).toHaveCount(0);
 }
 
 function localInput(date: Date) {
@@ -89,13 +90,7 @@ test.beforeAll(async () => {
 test("unauthenticated staff routes show a standalone login page", async ({
   page,
 }) => {
-  await page.request.get("/api/auth/csrf");
-  await page.request.get("/api/auth/session");
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    await page.context().clearCookies();
-    await page.goto("/he");
-    if (/\/he\/login/.test(page.url())) break;
-  }
+  await page.goto("/he");
   await expect(page).toHaveURL(/\/he\/login/);
   await expect(page.getByTestId("login-page")).toBeVisible();
   await expect(page.getByTestId("login-form")).toBeVisible();
