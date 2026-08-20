@@ -1,0 +1,11 @@
+# Documentation index
+
+This folder describes the Next.js clinic app as it exists in this repository (not the older Flask `Private_Clinic` UI).
+
+| Document | Audience | What it covers |
+|----------|----------|----------------|
+| [FEATURES.md](FEATURES.md) | Product / clinic staff | Screens, roles, and user flows |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Developers | Layouts, services, auth, data model, i18n |
+| [OPERATIONS.md](OPERATIONS.md) | Developers / operators | Environment, mail, tests, debug notes |
+
+Copy strings for the UI live in [`src/lib/copy.ts`](../src/lib/copy.ts) (`t(locale, en, he)`). Default locale is `he` in [`src/i18n/routing.ts`](../src/i18n/routing.ts).
