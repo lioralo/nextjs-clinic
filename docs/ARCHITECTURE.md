@@ -150,6 +150,10 @@ Do not set `letter-spacing` on Hebrew text.
 
 Keep e2e hooks: `clinic-sidebar`, `login-form`, `logout`, `clinic-logo` (large login mark).
 
+## Local development
+
+Day-to-day: `npm run local` ([LOCAL-RUNNER.md](LOCAL-RUNNER.md)). That fast-forwards the current git branch, `npm install`s, runs `prisma migrate deploy`, seeds, and starts Next.js. Creating a new Prisma migration still uses `npm run db:migrate`.
+
 ## Testing layout
 
 - Unit: `src/lib/*.test.ts` via Vitest (`npm test`).

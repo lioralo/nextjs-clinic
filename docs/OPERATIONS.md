@@ -47,7 +47,7 @@ npm run local:check        # unit tests + production build
 npm run local:e2e          # update + Playwright
 ```
 
-Implementation: [`scripts/local-run.sh`](../scripts/local-run.sh). It copies `.env.example` → `.env.local` when missing, skips `git pull` if the tree is dirty, and applies migrations with `prisma migrate deploy` (non-interactive, same as CI). Use `npm run db:migrate` only when **creating** a new migration.
+Implementation: [`scripts/local-run.sh`](../scripts/local-run.sh). Full command/flag/debug notes: [LOCAL-RUNNER.md](LOCAL-RUNNER.md). It copies `.env.example` → `.env.local` when missing, skips `git pull` if the tree is dirty, and applies migrations with `prisma migrate deploy` (non-interactive, same as CI). Use `npm run db:migrate` only when **creating** a new migration.
 
 ```bash
 npm run local -- --no-pull --kill-port
@@ -100,7 +100,7 @@ Useful test ids: `login-form`, `clinic-sidebar`, `logout`, `clinic-logo`, `clini
 | Contact form “works” but staff list empty | Different DB file | Same `DATABASE_URL` for seed, dev, and e2e |
 | TOTP rejected | Clock / recovery | 6 digits, 30s window; recovery codes are one-time hashes |
 | `prisma` client missing | Generate not run | `npx prisma generate` after schema pull |
-| Port 3000 in use | Leftover `next dev` | Stop the other process or let Playwright reuse it |
+| Port 3000 in use | Leftover `next dev` | `npm run local -- --kill-port` or stop the other process |
 
 Server logs: Next dev terminal. Prisma warns in development. Mail errors print `[mail error]`.
 
