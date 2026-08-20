@@ -1,20 +1,15 @@
 "use client";
 
-import React, { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import type { FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 
-export default function LoginPage({
-  params,
-}: {
-  params: Promise<{ locale: "en" | "he" }> | { locale: "en" | "he" };
-}) {
-  const resolvedParams = React.use(params as any) as { locale: "en" | "he" };
-  const locale = resolvedParams.locale;
+import type { AppLocale } from "@/lib/locale";
+
+export function LoginForm({ locale }: { locale: AppLocale }) {
   const router = useRouter();
-  const [username, setUsername] = useState("admin");
-  const [password, setPassword] = useState("admin-password");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -44,7 +39,7 @@ export default function LoginPage({
   }
 
   return (
-    <div className="max-w-md">
+    <>
       <h1 className="text-2xl font-semibold mb-2">
         {locale === "he" ? "התחברות" : "Login"}
       </h1>
@@ -56,12 +51,13 @@ export default function LoginPage({
 
       <form
         onSubmit={onSubmit}
+        data-testid="login-form"
         className="rounded-2xl border p-4 border-[var(--color-border)] bg-[var(--color-surface)] flex flex-col gap-3"
       >
         <label className="flex flex-col gap-1 text-sm">
           {locale === "he" ? "שם משתמש" : "Username"}
           <input
-              name="username"
+            name="username"
             className="rounded-xl border px-3 py-2 border-[var(--color-border)] bg-transparent outline-none"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
@@ -72,7 +68,7 @@ export default function LoginPage({
         <label className="flex flex-col gap-1 text-sm">
           {locale === "he" ? "סיסמה" : "Password"}
           <input
-              name="password"
+            name="password"
             type="password"
             className="rounded-xl border px-3 py-2 border-[var(--color-border)] bg-transparent outline-none"
             value={password}
@@ -81,9 +77,9 @@ export default function LoginPage({
           />
         </label>
 
-        {error && (
+        {error ? (
           <div className="text-sm text-[var(--color-primary-dark)]">{error}</div>
-        )}
+        ) : null}
 
         <button
           type="submit"
@@ -95,11 +91,10 @@ export default function LoginPage({
               ? "מתחבר..."
               : "Signing in..."
             : locale === "he"
-            ? "התחבר"
-            : "Sign in"}
+              ? "התחבר"
+              : "Sign in"}
         </button>
       </form>
-    </div>
+    </>
   );
 }
-

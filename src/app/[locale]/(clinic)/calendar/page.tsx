@@ -12,7 +12,12 @@ export default async function CalendarPage({
   searchParams,
 }: {
   params: Promise<{ locale: "en" | "he" }>;
-  searchParams: Promise<{ error?: string; bookLink?: string }>;
+  searchParams: Promise<{
+    error?: string;
+    bookLink?: string;
+    patientId?: string;
+    focus?: string;
+  }>;
 }) {
   const { locale } = await params;
   const query = await searchParams;
@@ -46,6 +51,8 @@ export default async function CalendarPage({
       <ClinicCalendarLoader
         locale={locale}
         formError={query.error ?? null}
+        focusPatientId={query.patientId ?? null}
+        focusStart={query.focus ?? null}
         patients={patients.map((patient) => ({
           id: patient.id,
           firstName: patient.firstName,

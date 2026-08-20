@@ -1,6 +1,8 @@
 import Link from "next/link";
 import React from "react";
 
+import { LogoutButton } from "@/components/logout-button";
+
 export default function AppShell({
   children,
   locale,
@@ -14,6 +16,7 @@ export default function AppShell({
     <div className="min-h-screen w-full bg-[var(--color-background)] text-[var(--color-foreground)]">
       <div className="flex min-h-screen w-full">
         <aside
+          data-testid="clinic-sidebar"
           className="hidden w-72 shrink-0 border border-transparent bg-[var(--color-surface)] md:block"
           style={{
             borderInlineEnd: "1px solid var(--color-border)",
@@ -66,6 +69,10 @@ export default function AppShell({
               >
                 {otherLocale === "he" ? "עברית" : "EN"}
               </a>
+              <LogoutButton
+                locale={locale}
+                label={locale === "he" ? "התנתק" : "Log out"}
+              />
             </div>
           </header>
 

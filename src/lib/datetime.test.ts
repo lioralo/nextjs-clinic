@@ -5,6 +5,7 @@ import {
   snapToClinicHours,
   startOfWeek,
   toDatetimeLocalValue,
+  nextDateTimeOnWeekday,
 } from "./datetime";
 
 describe("datetime helpers", () => {
@@ -36,5 +37,13 @@ describe("datetime helpers", () => {
     expect(start.getHours()).toBe(8);
     expect(start.getDate()).toBe(20);
     expect(end.getTime() - start.getTime()).toBe(60 * 60 * 1000);
+  });
+
+  it("nextDateTimeOnWeekday skips the past", () => {
+    const from = new Date(2026, 7, 19, 12, 0);
+    const nextWed = nextDateTimeOnWeekday(3, 10, 0, from);
+    expect(nextWed.getDay()).toBe(3);
+    expect(nextWed.getDate()).toBe(26);
+    expect(nextWed.getHours()).toBe(10);
   });
 });

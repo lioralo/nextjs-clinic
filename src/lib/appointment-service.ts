@@ -352,6 +352,23 @@ export async function listPublicVacancies(weeksAhead = 10) {
   return occurrences.filter((occurrence) => occurrence.kind === "VACANCY");
 }
 
+export async function listPatientAppointments(
+  patientId: string,
+  from = new Date(),
+  weeksAhead = 26
+) {
+  const start = new Date(from);
+  start.setMonth(start.getMonth() - 1);
+  const end = addWeeks(from, weeksAhead);
+  const occurrences = await listAppointmentsInRange(start, end);
+  return occurrences
+    .filter(
+      (occurrence) =>
+        occurrence.patientId === patientId && occurrence.kind === "APPOINTMENT"
+    )
+    .sort((a, b) => a.startAt.getTime() - b.startAt.getTime());
+}
+
 export async function createAppointment(data: {
   patientId?: string | null;
   providerId: string;

@@ -15,11 +15,16 @@ import {
   typeLabel,
 } from "@/lib/copy";
 import { toDateInputValue } from "@/lib/datetime";
+import { calendarFocusHref } from "@/lib/datetime";
 import {
   getPatient,
   listNotes,
   nextSessionNumber,
 } from "@/lib/patient-service";
+import {
+  listPatientAppointments,
+  toCalendarEvent,
+} from "@/lib/appointment-service";
 
 export default async function PatientDetailPage({
   params,
@@ -35,9 +40,10 @@ export default async function PatientDetailPage({
   const patient = await getPatient(id);
   if (!patient) notFound();
 
-  const [notes, suggestedSession] = await Promise.all([
+  const [notes, suggestedSession, meetings] = await Promise.all([
     listNotes(patient.id),
     nextSessionNumber(patient.id),
+    listPatientAppointments(patient.id),
   ]);
   const savePatient = updatePatientAction.bind(null, locale, patient.id);
   const saveNote = addNoteAction.bind(null, locale, patient.id);
@@ -87,6 +93,7 @@ export default async function PatientDetailPage({
       </div>
 
       {activeSection === "info" ? (
+        <>
         <form
           action={savePatient}
           className="rounded-2xl border bg-[var(--color-surface)] border-[var(--color-border)] p-5 flex flex-col gap-4"
@@ -203,6 +210,43 @@ export default async function PatientDetailPage({
             </button>
           </div>
         </form>
+        <section
+          data-testid="patient-meetings"
+          className="mt-4 rounded-2xl border bg-[var(--color-surface)] border-[var(--color-border)] p-5"
+        >
+          <h2 className="text-lg font-semibold mb-1">
+            {t(locale, "Meetings", "פגישות")}
+          </h2>
+          {meetings.length === 0 ? (
+            <p className="text-sm text-[var(--color-foreground)]/70">
+              {t(locale, "No meetings scheduled.", "אין פגישות מתוכננות.")}
+            </p>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {meetings.map((meeting) => {
+                const event = toCalendarEvent(meeting);
+                return (
+                  <li key={event.id}>
+                    <Link
+                      href={calendarFocusHref(
+                        locale,
+                        patient.id,
+                        meeting.startAt
+                      )}
+                      className="block rounded-xl border border-[var(--color-border)] px-3 py-2 hover:bg-[var(--color-primary-container)]"
+                    >
+                      {new Date(event.start).toLocaleString(locale, {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      })}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+        </>
       ) : (
         <section className="rounded-2xl border bg-[var(--color-surface)] border-[var(--color-border)] p-5">
           <h2 className="text-lg font-semibold mb-1">
