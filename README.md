@@ -6,6 +6,22 @@ Default locale is Hebrew (`/he`). `/` redirects there.
 
 ## Quick start
 
+One command (pulls `origin`, installs, migrates, seeds, starts the app):
+
+```bash
+npm run local
+```
+
+Flags: `npm run local -- --no-pull` (skip git), `--no-seed`, `--kill-port` (free 3000).
+
+First clone, same thing after `git clone` + `cd nextjs-clinic`. If npm scripts are not available yet:
+
+```bash
+bash scripts/local-run.sh
+```
+
+Manual steps (equivalent):
+
 ```bash
 cp .env.example .env.local
 npm install
@@ -36,6 +52,11 @@ Override the admin account with `ADMIN_USERNAME` / `ADMIN_PASSWORD` before `npm 
 
 | Command | Purpose |
 |---------|---------|
+| `npm run local` | **Local runner:** git pull, install, migrate, seed, `next dev` |
+| `npm run local:update` | Apply repo updates only (no server) |
+| `npm run local:dev` | Start the app after env is in place |
+| `npm run local:check` | Unit tests + `next build` |
+| `npm run local:e2e` | Update, then Playwright |
 | `npm run dev` | Next.js 16 dev server (Turbopack) |
 | `npm run build` / `npm start` | Production build and server |
 | `npm run db:migrate` | Prisma migrate + generate |

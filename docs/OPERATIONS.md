@@ -26,7 +26,7 @@ npm run db:migrate   # prisma migrate dev && prisma generate
 npm run db:seed      # admin, Test Patient, portal user, assessment types
 ```
 
-SQLite files (`*.db*`) are gitignored. After pulling new migrations, run `db:migrate` again.
+SQLite files (`*.db*`) are gitignored. After pulling new migrations, `npm run local:update` (or `npm run local`) applies them with `prisma migrate deploy`. Use `npm run db:migrate` when you are authoring a new migration.
 
 Seeded accounts:
 
@@ -35,10 +35,22 @@ Seeded accounts:
 
 Granting portal access from a patient file generates a new temp password and sets `forcePasswordChange`.
 
-## Local run
+## Local runner
+
+Use this after `git pull` or a fresh clone so install, migrations, and seed stay in sync:
 
 ```bash
-npm run dev
+npm run local              # update + start http://localhost:3000
+npm run local:update       # pull, npm install, migrate deploy, seed
+npm run local:dev          # start only
+npm run local:check        # unit tests + production build
+npm run local:e2e          # update + Playwright
+```
+
+Implementation: [`scripts/local-run.sh`](../scripts/local-run.sh). It copies `.env.example` → `.env.local` when missing, skips `git pull` if the tree is dirty, and applies migrations with `prisma migrate deploy` (non-interactive, same as CI). Use `npm run db:migrate` only when **creating** a new migration.
+
+```bash
+npm run local -- --no-pull --kill-port
 ```
 
 - App: http://localhost:3000 → `/he`
