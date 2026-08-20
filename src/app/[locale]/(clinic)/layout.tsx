@@ -1,5 +1,8 @@
+import { redirect } from "next/navigation";
+
 import AppShell from "@/components/app-shell";
 import { normalizeLocale } from "@/lib/locale";
+import { getSessionUser } from "@/lib/session";
 
 export default async function ClinicLayout({
   children,
@@ -10,5 +13,9 @@ export default async function ClinicLayout({
 }) {
   const { locale: rawLocale } = await params;
   const locale = normalizeLocale(rawLocale) ?? "he";
+  const user = await getSessionUser();
+  if (!user) {
+    redirect(`/${locale}/login`);
+  }
   return <AppShell locale={locale}>{children}</AppShell>;
 }

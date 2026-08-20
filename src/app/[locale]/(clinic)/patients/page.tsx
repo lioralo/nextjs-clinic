@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { nextOccurrenceAt } from "@/lib/appointment-service";
+import { calendarFocusHref } from "@/lib/datetime";
 import {
   parseCrmStatusFilter,
   listCrmPatients,
@@ -162,12 +163,20 @@ export default async function PatientsPage({
                       {statusLabel(locale, patient.status)}
                     </td>
                     <td className="px-4 py-3 text-[var(--color-foreground)]/80">
-                      {next
-                        ? next.toLocaleString(locale, {
+                      {next ? (
+                        <Link
+                          href={calendarFocusHref(locale, patient.id, next)}
+                          data-testid={`next-appt-${patient.id}`}
+                          className="hover:underline"
+                        >
+                          {next.toLocaleString(locale, {
                             dateStyle: "medium",
                             timeStyle: "short",
-                          })
-                        : t(locale, "Not scheduled", "לא מתוכנן")}
+                          })}
+                        </Link>
+                      ) : (
+                        t(locale, "Not scheduled", "לא מתוכנן")
+                      )}
                     </td>
                     <td className="px-4 py-3">{patient.phone ?? "—"}</td>
                   </tr>

@@ -31,6 +31,36 @@ export function addWeeks(date: Date, weeks: number): Date {
   return addDays(date, weeks * 7);
 }
 
+/** Next local datetime on `weekday` (0=Sun) at hours:minutes, not in the past. */
+export function nextDateTimeOnWeekday(
+  weekday: number,
+  hours: number,
+  minutes: number,
+  from = new Date()
+): Date {
+  const start = new Date(from);
+  const diff = (weekday - start.getDay() + 7) % 7;
+  const candidate = new Date(start);
+  candidate.setDate(start.getDate() + diff);
+  candidate.setHours(hours, minutes, 0, 0);
+  if (candidate.getTime() <= from.getTime()) {
+    candidate.setDate(candidate.getDate() + 7);
+  }
+  return candidate;
+}
+
+export function calendarFocusHref(
+  locale: string,
+  patientId: string,
+  start: Date
+) {
+  const params = new URLSearchParams({
+    patientId,
+    focus: start.toISOString(),
+  });
+  return `/${locale}/calendar?${params.toString()}`;
+}
+
 export function toDateInputValue(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }

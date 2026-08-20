@@ -12,6 +12,8 @@ export function ClinicCalendarLoader(props: {
   patients: PatientOptionDTO[];
   appointments: CalendarEventDTO[];
   formError?: string | null;
+  focusPatientId?: string | null;
+  focusStart?: string | null;
 }) {
   return <ClinicCalendar {...props} />;
 }

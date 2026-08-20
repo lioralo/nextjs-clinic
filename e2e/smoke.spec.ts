@@ -34,6 +34,8 @@ test("patient notes save and calendar week grid is visible", async ({
   await expect(page.getByTestId("clinic-calendar")).toBeVisible({
     timeout: 15_000,
   });
+  await expect(page.getByTestId("open-booking-panel")).toBeVisible();
+  await page.getByTestId("open-booking-panel").click();
   await expect(page.getByTestId("booking-panel")).toBeVisible();
   await expect(page.locator(".fc")).toBeVisible();
   await expect(page.locator(".fc-timegrid")).toBeVisible();

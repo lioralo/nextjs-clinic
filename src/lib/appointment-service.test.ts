@@ -25,6 +25,7 @@ import {
   findConflict,
   isVacancyOccurrence,
   listAppointmentsInRange,
+  listPatientAppointments,
   moveAppointment,
   parseAppointmentRange,
   parseEventId,
@@ -450,6 +451,46 @@ describe("appointment-service", () => {
     expect(prisma.appointment.delete).toHaveBeenCalledWith({
       where: { id: "v1" },
     });
+  });
+
+  it("listPatientAppointments keeps only that patient's visits", async () => {
+    const start = new Date("2026-08-01T00:00:00.000Z");
+    (prisma.appointment.findMany as ReturnType<typeof vi.fn>).mockResolvedValue(
+      [
+        {
+          ...series({
+            id: "mine",
+            patientId: "p1",
+            startAt: new Date("2026-08-20T09:00:00.000Z"),
+            endAt: new Date("2026-08-20T10:00:00.000Z"),
+          }),
+          exceptions: [],
+        },
+        {
+          ...series({
+            id: "other",
+            patientId: "p2",
+            startAt: new Date("2026-08-21T09:00:00.000Z"),
+            endAt: new Date("2026-08-21T10:00:00.000Z"),
+          }),
+          exceptions: [],
+        },
+        {
+          ...series({
+            id: "vac",
+            patientId: null,
+            patient: null,
+            kind: "VACANCY",
+            startAt: new Date("2026-08-20T11:00:00.000Z"),
+            endAt: new Date("2026-08-20T12:00:00.000Z"),
+          }),
+          exceptions: [],
+        },
+      ]
+    );
+
+    const rows = await listPatientAppointments("p1", start);
+    expect(rows.map((row) => row.id)).toEqual(["mine"]);
   });
 
   it("toCalendarEvent public ids stay seriesId__iso for recurring vacancies", () => {

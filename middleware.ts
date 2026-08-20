@@ -27,6 +27,7 @@ export async function middleware(req: NextRequest) {
 
   const isProtected =
     pathname === `/${locale}` ||
+    pathname === `/${locale}/` ||
     protectedPrefixes.some((p) => pathname.startsWith(`/${locale}${p}`));
 
   if (!isProtected) return NextResponse.next();
@@ -35,8 +36,12 @@ export async function middleware(req: NextRequest) {
     req,
     secret: process.env.NEXTAUTH_SECRET,
   });
+  const userId =
+    (typeof token?.id === "string" && token.id) ||
+    (typeof token?.sub === "string" && token.sub) ||
+    null;
 
-  if (!token) {
+  if (!userId) {
     const loginUrl = new URL(`/${locale}/login`, req.url);
     return NextResponse.redirect(loginUrl);
   }

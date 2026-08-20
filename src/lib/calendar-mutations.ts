@@ -11,7 +11,7 @@ import {
   parseEventId,
   skipOccurrence,
 } from "@/lib/appointment-service";
-import { parseDateInput } from "@/lib/datetime";
+import { parseDateInput, nextDateTimeOnWeekday } from "@/lib/datetime";
 import { normalizeLocale } from "@/lib/locale";
 import { prisma } from "@/lib/prisma";
 import { ensurePublicBookingLink } from "@/lib/public-booking-service";
@@ -228,11 +228,96 @@ export async function occupyVacancyRecord(
   return { ok: true, id: result.id };
 }
 
+function parseClockTime(
+  value: string
+): { hours: number; minutes: number } | null {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(value.trim());
+  if (!match) return null;
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (hours > 23 || minutes > 59) return null;
+  return { hours, minutes };
+}
+
+export function weekdayVacancyWindows(
+  weekdays: number[],
+  hours: number,
+  minutes: number,
+  durationMinutes: number,
+  from = new Date()
+) {
+  const durationMs = Math.max(15, durationMinutes) * 60 * 1000;
+  return [...new Set(weekdays.filter((day) => day >= 0 && day <= 6))].map(
+    (weekday) => {
+      const startAt = nextDateTimeOnWeekday(weekday, hours, minutes, from);
+      return { weekday, startAt, endAt: new Date(startAt.getTime() + durationMs) };
+    }
+  );
+}
+
+export async function publishPublicVacancies(
+  userId: string,
+  input: {
+    weekdays: number[];
+    startTime: string;
+    durationMinutes?: number;
+    title?: string;
+    isRecurring?: boolean;
+    recurrenceEndDate?: string;
+  }
+): Promise<CalendarMutationResult> {
+  const clock = parseClockTime(input.startTime);
+  if (!clock && input.weekdays.length > 0) {
+    return { ok: false, error: "invalid" };
+  }
+
+  if (clock && input.weekdays.length > 0) {
+    const windows = weekdayVacancyWindows(
+      input.weekdays,
+      clock.hours,
+      clock.minutes,
+      input.durationMinutes ?? 60
+    );
+    for (const window of windows) {
+      const created = await createAppointmentRecord(userId, {
+        kind: "VACANCY",
+        startAt: window.startAt.toISOString(),
+        endAt: window.endAt.toISOString(),
+        title: input.title?.trim() || "Vacant Slot",
+        isRecurring: input.isRecurring !== false,
+        recurrenceEndDate: input.recurrenceEndDate,
+      });
+      if (!created.ok && created.error !== "conflict") {
+        return created;
+      }
+    }
+  }
+
+  const link = await ensurePublicBookingLink(userId);
+  revalidateClinic();
+  return { ok: true, token: link.token };
+}
+
 export async function applyCalendarIntent(
   userId: string,
   formData: FormData
 ): Promise<CalendarMutationResult> {
   const intent = String(formData.get("intent") ?? "create");
+
+  if (intent === "publish") {
+    const weekdays = formData
+      .getAll("weekday")
+      .map((value) => Number(value))
+      .filter((value) => Number.isInteger(value));
+    return publishPublicVacancies(userId, {
+      weekdays,
+      startTime: String(formData.get("startTime") ?? "10:00"),
+      durationMinutes: Number(formData.get("durationMinutes") ?? 60),
+      title: String(formData.get("title") ?? ""),
+      isRecurring: String(formData.get("isRecurring") ?? "") === "1",
+      recurrenceEndDate: String(formData.get("recurrenceEndDate") ?? ""),
+    });
+  }
 
   if (intent === "public-link") {
     const link = await ensurePublicBookingLink(userId);

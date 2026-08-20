@@ -23,6 +23,8 @@ type Props = {
   patients: PatientOptionDTO[];
   appointments: CalendarEventDTO[];
   formError?: string | null;
+  focusPatientId?: string | null;
+  focusStart?: string | null;
 };
 
 type Draft = {
@@ -52,8 +54,12 @@ function defaultRecurring(patient: PatientOptionDTO | undefined) {
   return patient?.status === "ONGOING";
 }
 
-function emptyDraft(patients: PatientOptionDTO[]): Draft {
-  const first = patients[0];
+function emptyDraft(
+  patients: PatientOptionDTO[],
+  focusPatientId?: string | null
+): Draft {
+  const focused = patients.find((patient) => patient.id === focusPatientId);
+  const first = focused ?? patients[0];
   const { start, end } = snapToClinicHours();
   return {
     kind: "APPOINTMENT",
@@ -102,9 +108,14 @@ export function ClinicCalendar({
   patients,
   appointments,
   formError,
+  focusPatientId,
+  focusStart,
 }: Props) {
   const router = useRouter();
-  const [draft, setDraft] = useState<Draft>(() => emptyDraft(patients));
+  const [draft, setDraft] = useState<Draft>(() =>
+    emptyDraft(patients, focusPatientId)
+  );
+  const [panelOpen, setPanelOpen] = useState(Boolean(formError));
   const [selected, setSelected] = useState<SelectedEvent | null>(null);
   const [editStart, setEditStart] = useState("");
   const [editEnd, setEditEnd] = useState("");
@@ -112,7 +123,11 @@ export function ClinicCalendar({
     "IN_PERSON"
   );
   const [editMeetingLink, setEditMeetingLink] = useState("");
-  const [occupyPatientId, setOccupyPatientId] = useState(patients[0]?.id ?? "");
+  const [occupyPatientId, setOccupyPatientId] = useState(
+    focusPatientId && patients.some((patient) => patient.id === focusPatientId)
+      ? focusPatientId
+      : (patients[0]?.id ?? "")
+  );
   const [error, setError] = useState<string | null>(
     formError ? actionMessage(locale, formError) : null
   );
@@ -124,7 +139,18 @@ export function ClinicCalendar({
   useEffect(() => {
     if (!formError) return;
     setError(actionMessage(locale, formError));
+    setPanelOpen(true);
   }, [formError, locale]);
+
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      setPanelOpen(false);
+      setSelected(null);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   useEffect(() => {
     if (!selected) return;
@@ -141,7 +167,12 @@ export function ClinicCalendar({
         title: appointment.title,
         start: appointment.start,
         end: appointment.end,
-        classNames: [`fc-kind-${appointment.kind.toLowerCase()}`],
+        classNames: [
+          `fc-kind-${appointment.kind.toLowerCase()}`,
+          focusPatientId && appointment.patientId === focusPatientId
+            ? "fc-patient-focus"
+            : "",
+        ].filter(Boolean),
         editable: appointment.kind === "APPOINTMENT",
         extendedProps: {
           patientId: appointment.patientId,
@@ -152,8 +183,10 @@ export function ClinicCalendar({
           meetingLink: appointment.meetingLink,
         },
       })),
-    [appointments]
+    [appointments, focusPatientId]
   );
+
+  const focusDate = focusStart ? new Date(focusStart) : null;
 
   const selectedPatient = patients.find((patient) => patient.id === draft.patientId);
 
@@ -197,17 +230,35 @@ export function ClinicCalendar({
   return (
     <div
       data-testid="clinic-calendar"
-      className="clinic-calendar grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_20rem] gap-4"
+      className="clinic-calendar flex flex-col gap-4"
     >
-      <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 overflow-x-auto">
-        {error ? (
-          <div
-            className="mb-3 text-sm text-[var(--color-primary-dark)]"
-            data-testid="calendar-error"
-          >
-            {error}
-          </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          data-testid="open-booking-panel"
+          onClick={() => {
+            setSelected(null);
+            setPanelOpen(true);
+          }}
+          className="rounded-xl bg-[var(--color-primary)] text-[var(--color-surface)] px-4 py-2 font-semibold"
+        >
+          {t(locale, "Book appointment", "קבע פגישה")}
+        </button>
+        {focusPatientId ? (
+          <p className="text-sm text-[var(--color-foreground)]/70">
+            {t(locale, "Showing a focused patient on the week grid.", "מציג מטופל ממוקד ביומן השבועי.")}
+          </p>
         ) : null}
+      </div>
+      {error && !panelOpen ? (
+        <div
+          className="text-sm text-[var(--color-primary-dark)]"
+          data-testid="calendar-error"
+        >
+          {error}
+        </div>
+      ) : null}
+      <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 overflow-x-auto">
         <FullCalendar
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
           initialView="timeGridWeek"
@@ -239,10 +290,19 @@ export function ClinicCalendar({
           slotDuration="00:30:00"
           snapDuration="00:15:00"
           allDaySlot={false}
+          initialDate={
+            focusDate && !Number.isNaN(focusDate.getTime()) ? focusDate : undefined
+          }
+          scrollTime={
+            focusDate && !Number.isNaN(focusDate.getTime())
+              ? `${String(focusDate.getHours()).padStart(2, "0")}:00:00`
+              : "08:00:00"
+          }
           eventTimeFormat={{ hour: "2-digit", minute: "2-digit", hour12: false }}
           select={(info) => {
             setSelected(null);
             setError(null);
+            setPanelOpen(true);
             setDraft((current) => ({
               ...current,
               startAt: toDatetimeLocalValue(info.start),
@@ -254,6 +314,7 @@ export function ClinicCalendar({
             if (!range) return;
             const kind = String(info.event.extendedProps.kind ?? "APPOINTMENT");
             setError(null);
+            setPanelOpen(true);
             setSelected({
               id: info.event.id,
               seriesId: String(info.event.extendedProps.seriesId ?? info.event.id),
@@ -314,10 +375,30 @@ export function ClinicCalendar({
         />
       </div>
 
-      <aside
-        data-testid="booking-panel"
-        className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 h-fit"
-      >
+      {panelOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4"
+          data-testid="booking-overlay"
+          onClick={() => {
+            setPanelOpen(false);
+            setSelected(null);
+          }}
+        >
+          <aside
+            data-testid="booking-panel"
+            role="dialog"
+            aria-modal="true"
+            onClick={(event) => event.stopPropagation()}
+            className="mt-8 w-full max-w-md rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4"
+          >
+            {error ? (
+              <div
+                className="mb-3 text-sm text-[var(--color-primary-dark)]"
+                data-testid="calendar-error"
+              >
+                {error}
+              </div>
+            ) : null}
         {selected ? (
           <div className="flex flex-col gap-3">
             <h2 className="text-lg font-semibold">{selected.title}</h2>
@@ -528,7 +609,10 @@ export function ClinicCalendar({
               )}
               <button
                 type="button"
-                onClick={() => setSelected(null)}
+                onClick={() => {
+                  setSelected(null);
+                  setPanelOpen(false);
+                }}
                 className="rounded-xl bg-[var(--color-primary)] text-[var(--color-surface)] px-4 py-2 font-semibold"
               >
                 {t(locale, "Close", "סגור")}
@@ -590,6 +674,7 @@ export function ClinicCalendar({
                 {t(locale, "Patient", "מטופל")}
                 <select
                   name="patientId"
+                  data-testid="draft-patient"
                   required
                   value={draft.patientId}
                   onChange={(e) => {
@@ -758,9 +843,21 @@ export function ClinicCalendar({
                   ? t(locale, "Save Block", "שמירת חסימה")
                   : t(locale, "Book Selected Slot", "קבע משבצת נבחרת")}
             </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSelected(null);
+                setPanelOpen(false);
+              }}
+              className="rounded-xl border border-[var(--color-border)] px-4 py-2"
+            >
+              {t(locale, "Close", "סגור")}
+            </button>
           </form>
         )}
       </aside>
+        </div>
+      ) : null}
     </div>
   );
 }
