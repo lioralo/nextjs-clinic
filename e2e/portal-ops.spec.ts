@@ -135,8 +135,13 @@ test("group sessions show on the staff week grid", async ({ page }) => {
   await page.getByTestId("group-name").fill(groupName);
   await page.getByTestId("create-group").click();
   await expect(page.getByTestId("add-group-member")).toBeVisible();
+  await page.getByTestId("group-patient").selectOption({ label: "Test Patient" });
   await page.getByTestId("add-group-member").click();
-  await expect(page.getByText("Test Patient").first()).toBeVisible();
+  await expect(
+    page.locator("li").filter({ hasText: "Test Patient" }).getByRole("button", {
+      name: /הסר|Remove/,
+    })
+  ).toBeVisible();
 
   const start = new Date();
   start.setDate(start.getDate() + 1);

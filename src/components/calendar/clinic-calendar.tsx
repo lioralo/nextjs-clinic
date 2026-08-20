@@ -7,7 +7,7 @@ import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { RecurrenceScope } from "@/lib/calendar-mutations";
 import type {
@@ -131,13 +131,30 @@ export function ClinicCalendar({
   const [error, setError] = useState<string | null>(
     formError ? actionMessage(locale, formError) : null
   );
+  const dismissedRef = useRef(false);
 
   useEffect(() => {
     void fetch("/api/calendar", { method: "GET", credentials: "same-origin" });
   }, []);
 
-  useEffect(() => {
+  function dismissPanel() {
+    dismissedRef.current = true;
+    setSelected(null);
+    setPanelOpen(false);
+    setError(null);
     if (!formError) return;
+    const params = new URLSearchParams(window.location.search);
+    params.delete("error");
+    const query = params.toString();
+    router.replace(`/${locale}/calendar${query ? `?${query}` : ""}`);
+  }
+
+  useEffect(() => {
+    if (!formError) {
+      dismissedRef.current = false;
+      return;
+    }
+    if (dismissedRef.current) return;
     setError(actionMessage(locale, formError));
     setPanelOpen(true);
   }, [formError, locale]);
@@ -145,12 +162,11 @@ export function ClinicCalendar({
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
       if (event.key !== "Escape") return;
-      setPanelOpen(false);
-      setSelected(null);
+      dismissPanel();
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [formError, locale, router]);
 
   useEffect(() => {
     if (!selected) return;
@@ -382,8 +398,7 @@ export function ClinicCalendar({
           className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4"
           data-testid="booking-overlay"
           onClick={() => {
-            setPanelOpen(false);
-            setSelected(null);
+            dismissPanel();
           }}
         >
           <aside
@@ -642,9 +657,9 @@ export function ClinicCalendar({
               )}
               <button
                 type="button"
+                data-testid="close-booking-panel"
                 onClick={() => {
-                  setSelected(null);
-                  setPanelOpen(false);
+                  dismissPanel();
                 }}
                 className="rounded-xl bg-[var(--color-primary)] text-[var(--color-surface)] px-4 py-2 font-semibold"
               >
@@ -878,9 +893,9 @@ export function ClinicCalendar({
             </button>
             <button
               type="button"
+              data-testid="close-booking-panel"
               onClick={() => {
-                setSelected(null);
-                setPanelOpen(false);
+                dismissPanel();
               }}
               className="rounded-xl border border-[var(--color-border)] px-4 py-2"
             >

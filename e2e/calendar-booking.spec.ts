@@ -25,8 +25,8 @@ async function closeBookingPanel(page: Page) {
   if (!(await panel.isVisible().catch(() => false))) {
     return;
   }
-  await panel.getByRole("button", { name: /סגור|Close/ }).click();
-  await expect(panel).toHaveCount(0);
+  await page.getByTestId("close-booking-panel").click();
+  await expect(panel).toHaveCount(0, { timeout: 10_000 });
 }
 
 function localInput(date: Date) {
