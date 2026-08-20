@@ -60,7 +60,7 @@ Useful `data-testid` hooks (keep these if you restyle chrome):
 
 ### Phone viewport
 
-`mobile.spec.ts` uses `test.use({ ...devices["iPhone 13"] })` (390×844). It does **not** duplicate the whole suite — that would double CI time. Desktop specs stay on Desktop Chrome.
+`mobile.spec.ts` uses `test.use({ ...devices["iPhone 13"], defaultBrowserType: "chromium" })` (390×844, touch). It forces Chromium because CI only installs that browser (`npx playwright install --with-deps chromium`). It does **not** duplicate the whole suite — that would double CI time. Desktop specs stay on Desktop Chrome.
 
 What it asserts:
 

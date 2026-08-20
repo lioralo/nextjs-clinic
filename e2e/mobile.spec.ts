@@ -2,8 +2,12 @@ import { devices, expect, test } from "@playwright/test";
 
 import { login } from "./auth";
 
+const iphone = devices["iPhone 13"];
+
 test.use({
-  ...devices["iPhone 13"],
+  ...iphone,
+  // Device presets default to WebKit; this repo's CI installs Chromium only.
+  defaultBrowserType: "chromium",
 });
 
 test("mobile login form fits the viewport", async ({ page }) => {
