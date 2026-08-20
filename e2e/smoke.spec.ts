@@ -47,4 +47,8 @@ test("patient notes save and calendar week grid is visible", async ({
   await expect(page.getByTestId("booking-panel")).toBeVisible();
   await expect(page.locator(".fc")).toBeVisible();
   await expect(page.locator(".fc-timegrid")).toBeVisible();
+  await page.screenshot({
+    path: "test-results/calendar-week.png",
+    fullPage: true,
+  });
 });

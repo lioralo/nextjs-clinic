@@ -10,7 +10,9 @@
     "db:migrate": "prisma migrate dev && prisma generate",
     "db:seed": "prisma db seed",
     "test": "vitest run",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "e2e:headed": "playwright test --headed",
+    "e2e:report": "playwright show-report"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

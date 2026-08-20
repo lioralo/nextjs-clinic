@@ -8,10 +8,13 @@ export default defineConfig({
   timeout: 60_000,
   workers: 1,
   fullyParallel: false,
+  reporter: [["list"], ["html", { open: "never" }]],
 
   use: {
     baseURL: nextBaseURL,
-    trace: "on-first-retry",
+    screenshot: "on",
+    video: "on",
+    trace: "retain-on-failure",
     ...devices["Desktop Chrome"],
   },
 

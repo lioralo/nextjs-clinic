@@ -42,6 +42,8 @@ Override the admin account with `ADMIN_USERNAME` / `ADMIN_PASSWORD` before `npm 
 | `npm run db:seed` | Admin, sample patient, portal user, PHQ-9/GAD-7 types |
 | `npm test` | Vitest unit tests |
 | `npm run e2e` | Playwright (starts `npm run dev` if needed) |
+| `npm run e2e:headed` | Playwright with a visible browser |
+| `npm run e2e:report` | Open the last HTML report |
 | `npm run lint` | ESLint |
 
 ## Stack

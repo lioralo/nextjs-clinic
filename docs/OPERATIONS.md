@@ -59,8 +59,12 @@ npm start
 ```bash
 npm test          # Vitest
 npm run e2e       # Playwright, Desktop Chrome, one worker
+npm run e2e:headed
+npm run e2e:report
 npx next build    # typecheck + compile
 ```
+
+GitHub Actions (`.github/workflows/test.yml`) on `main` and pull requests: migrate + seed, unit tests, Playwright, upload `playwright-report` and `test-results` (screenshots and video).
 
 Playwright starts `npm run dev` unless something already listens on `:3000` (`reuseExistingServer` when `CI` is unset). If e2e hangs on login:
 
