@@ -16,6 +16,10 @@ import {
 import { prisma } from "@/lib/prisma";
 import { getPortalPatient } from "@/lib/portal-service";
 import { listPatientResources } from "@/lib/resource-service";
+import { takePortalAssessmentAction } from "@/app/[locale]/(portal)/patient/care-actions";
+import { AssessmentForm } from "@/components/assessment-form";
+import { listPatientAssessments } from "@/lib/assessment-service";
+import { listSharedPatientPlans } from "@/lib/treatment-plan-service";
 import { getSessionUser } from "@/lib/session";
 
 export default async function PatientHomePage({
@@ -33,7 +37,7 @@ export default async function PatientHomePage({
   }
 
   const staff = await getPrimaryStaffUser();
-  const [meetings, groups, notes, resources, notifications, thread] =
+  const [meetings, groups, notes, resources, notifications, thread, plans, assessments] =
     await Promise.all([
       listPatientAppointments(portal.patient.id),
       listPatientGroupSessions(portal.patient.id),
@@ -45,6 +49,8 @@ export default async function PatientHomePage({
       listPatientResources(portal.patient.id),
       listNotifications(user.id),
       staff ? listThread(user.id, staff.id) : Promise.resolve([]),
+      listSharedPatientPlans(portal.patient.id),
+      listPatientAssessments(portal.patient.id),
     ]);
   const upcoming = meetings.filter((row) => row.startAt.getTime() >= Date.now());
   const send = sendPatientMessageAction.bind(null, locale);
@@ -55,6 +61,9 @@ export default async function PatientHomePage({
       <h1 className="text-2xl font-semibold" data-testid="patient-home">
         {t(locale, "My clinic", "הקליניקה שלי")}
       </h1>
+      <a href={`/${locale}/patient/security`} className="text-sm hover:underline">
+        {t(locale, "Security / 2FA", "אבטחה / אימות דו-שלבי")}
+      </a>
 
       <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
         <h2 className="font-semibold mb-2">
@@ -165,6 +174,51 @@ export default async function PatientHomePage({
             {t(locale, "Send", "שלח")}
           </button>
         </form>
+      </section>
+
+      <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+        <h2 className="font-semibold mb-2">
+          {t(locale, "Treatment plan", "תוכנית טיפול")}
+        </h2>
+        {plans.length === 0 ? (
+          <p className="text-sm text-[var(--color-foreground)]/70">
+            {t(locale, "No shared treatment plan.", "אין תוכנית טיפול משותפת.")}
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-3" data-testid="portal-plans">
+            {plans.map((plan) => (
+              <li key={plan.id}>
+                <div className="font-medium">
+                  {plan.diagnosisDescription || t(locale, "Treatment plan", "תוכנית טיפול")}
+                </div>
+                <ul className="mt-1 text-sm">
+                  {plan.goals.map((goal) => (
+                    <li key={goal.id}>
+                      {goal.description} · {goal.progressPercentage}%
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+        <h2 className="font-semibold mb-2">
+          {t(locale, "Assessments", "שאלונים")}
+        </h2>
+        <AssessmentForm
+          locale={locale}
+          action={takePortalAssessmentAction.bind(null, locale)}
+        />
+        <ul className="mt-3 flex flex-col gap-2" data-testid="portal-assessments">
+          {assessments.map((row) => (
+            <li key={row.id} className="text-sm">
+              {row.type.name}: {row.totalScore} · {row.interpretation}
+            </li>
+          ))}
+        </ul>
       </section>
 
       <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">

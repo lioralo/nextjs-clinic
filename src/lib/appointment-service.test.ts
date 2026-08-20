@@ -82,7 +82,7 @@ describe("appointment-service", () => {
         })
       )
     ).toEqual({
-      id: "a1",
+      id: `a1__${startAt.toISOString()}`,
       seriesId: "a1",
       patientId: "p1",
       title: "Test Patient",

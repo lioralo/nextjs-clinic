@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "../src/lib/prisma";
+import { ensureAssessmentTypes } from "../src/lib/assessment-service";
 
 async function main() {
   const username = process.env.ADMIN_USERNAME ?? "admin";
@@ -67,6 +68,8 @@ async function main() {
       });
     }
   }
+
+  await ensureAssessmentTypes();
 }
 
 main()

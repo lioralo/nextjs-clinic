@@ -213,9 +213,7 @@ export function toCalendarEvent(
 ): CalendarEventDTO {
   const occurrenceKey = appointment.originalStartAt ?? appointment.startAt;
   return {
-    id: appointment.isRecurring
-      ? `${appointment.id}__${occurrenceKey.toISOString()}`
-      : appointment.id,
+    id: `${appointment.id}__${occurrenceKey.toISOString()}`,
     seriesId: appointment.id,
     patientId: appointment.patientId,
     title: eventTitle(appointment),

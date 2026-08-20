@@ -75,6 +75,22 @@ enum NotificationCategory {
   APPOINTMENT
   CANCEL
   RESOURCE
+  CONTACT
+}
+
+enum TreatmentPlanStatus {
+  ACTIVE
+  COMPLETED
+  REVIEW
+  DISCONTINUED
+}
+
+enum GoalStatus {
+  ACTIVE
+  IN_PROGRESS
+  ACHIEVED
+  DISCONTINUED
+  REVISED
 }
 
 model User {
@@ -86,6 +102,9 @@ model User {
   isActive            Boolean  @default(true)
   forcePasswordChange Boolean  @default(false)
   patientId           String?  @unique
+  totpSecret          String?
+  totpEnabled         Boolean  @default(false)
+  totpRecoveryHashes  String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -99,6 +118,7 @@ model User {
   messagesSent       Message[]           @relation("MessageSender")
   messagesReceived   Message[]           @relation("MessageRecipient")
   notifications      Notification[]
+  assessmentsTaken   Assessment[]
 }
 
 model Patient {
@@ -129,6 +149,8 @@ model Patient {
   groupMemberships GroupMember[]
   attendance       GroupAttendance[]
   assignedResources PatientResource[]
+  treatmentPlans    TreatmentPlan[]
+  assessments       Assessment[]
 }
 
 model Appointment {
@@ -321,4 +343,78 @@ model PatientResource {
   resource Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
 
   @@id([patientId, resourceId])
+}
+
+model TreatmentPlan {
+  id                    String              @id @default(cuid())
+  patientId             String
+  diagnosisCode         String?
+  diagnosisDescription  String?
+  problemStatement      String?
+  strengths             String?
+  notes                 String?
+  status                TreatmentPlanStatus @default(ACTIVE)
+  shareWithPatient      Boolean             @default(false)
+  reviewDate            DateTime?
+  nextReviewDate        DateTime?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  patient Patient             @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  goals   TreatmentPlanGoal[]
+}
+
+model TreatmentPlanGoal {
+  id                 String     @id @default(cuid())
+  planId             String
+  goalNumber         Int
+  description        String
+  objectives         String?
+  interventions      String?
+  targetDate         DateTime?
+  status             GoalStatus @default(ACTIVE)
+  progressPercentage Int        @default(0)
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  plan TreatmentPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+}
+
+model AssessmentType {
+  id          String  @id @default(cuid())
+  key         String  @unique
+  name        String
+  description String?
+  minScore    Int
+  maxScore    Int
+  isActive    Boolean @default(true)
+
+  assessments Assessment[]
+}
+
+model Assessment {
+  id             String   @id @default(cuid())
+  patientId      String
+  typeId         String
+  takenById      String
+  answersJson    String
+  totalScore     Int
+  severityLevel  String
+  interpretation String
+  notes          String?
+  takenAt        DateTime @default(now())
+
+  patient Patient        @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  type    AssessmentType @relation(fields: [typeId], references: [id])
+  takenBy User           @relation(fields: [takenById], references: [id])
+}
+
+model ContactInquiry {
+  id        String    @id @default(cuid())
+  name      String
+  email     String?
+  phone     String?
+  message   String
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
 }

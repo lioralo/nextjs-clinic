@@ -67,6 +67,18 @@ export default function AppShell({
               >
                 {locale === "he" ? "משאבים" : "Resources"}
               </Link>
+              <Link
+                className="rounded-xl px-3 py-2 hover:bg-[var(--color-primary-container)] hover:text-[var(--color-primary)]"
+                href={`/${locale}/inquiries`}
+              >
+                {locale === "he" ? "פניות" : "Inquiries"}
+              </Link>
+              <Link
+                className="rounded-xl px-3 py-2 hover:bg-[var(--color-primary-container)] hover:text-[var(--color-primary)]"
+                href={`/${locale}/settings`}
+              >
+                {locale === "he" ? "הגדרות" : "Settings"}
+              </Link>
             </nav>
           </div>
         </aside>

@@ -10,29 +10,29 @@ export function LoginForm({ locale }: { locale: AppLocale }) {
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [otp, setOtp] = useState("");
+  const [needsTotp, setNeedsTotp] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault();
-    setSubmitting(true);
-    setError(null);
-
+  async function completeSignIn() {
     const res = await signIn("credentials", {
       username,
       password,
+      otp,
       redirect: false,
     });
-
-    setSubmitting(false);
-
     if (!res?.ok) {
       setError(
         locale === "he"
-          ? "פרטי התחברות לא נכונים."
-          : "Invalid username or password."
+          ? needsTotp
+            ? "קוד אימות לא תקין."
+            : "פרטי התחברות לא נכונים."
+          : needsTotp
+            ? "Invalid authentication code."
+            : "Invalid username or password."
       );
-      return;
+      return false;
     }
 
     const sessionRes = await fetch("/api/auth/session");
@@ -45,10 +45,45 @@ export function LoginForm({ locale }: { locale: AppLocale }) {
           ? `/${locale}/patient/change-password`
           : `/${locale}/patient`
       );
-      return;
+      return true;
+    }
+    router.push(`/${locale}`);
+    return true;
+  }
+
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    setSubmitting(true);
+    setError(null);
+
+    if (!needsTotp) {
+      const preflight = await fetch("/api/auth/preflight", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
+      const result = (await preflight.json()) as {
+        ok?: boolean;
+        needsTotp?: boolean;
+      };
+      if (!result.ok) {
+        setSubmitting(false);
+        setError(
+          locale === "he"
+            ? "פרטי התחברות לא נכונים."
+            : "Invalid username or password."
+        );
+        return;
+      }
+      if (result.needsTotp) {
+        setNeedsTotp(true);
+        setSubmitting(false);
+        return;
+      }
     }
 
-    router.push(`/${locale}`);
+    await completeSignIn();
+    setSubmitting(false);
   }
 
   return (
@@ -57,9 +92,13 @@ export function LoginForm({ locale }: { locale: AppLocale }) {
         {locale === "he" ? "התחברות" : "Login"}
       </h1>
       <p className="text-[var(--color-foreground)]/70 mb-4">
-        {locale === "he"
-          ? "היכנס/י למערכת עם שם משתמש וסיסמה."
-          : "Sign in with your username and password."}
+        {needsTotp
+          ? locale === "he"
+            ? "הזינו את קוד היישומון או קוד שחזור."
+            : "Enter the authenticator or recovery code."
+          : locale === "he"
+            ? "היכנס/י למערכת עם שם משתמש וסיסמה."
+            : "Sign in with your username and password."}
       </p>
 
       <form
@@ -75,6 +114,7 @@ export function LoginForm({ locale }: { locale: AppLocale }) {
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             autoComplete="username"
+            disabled={needsTotp}
           />
         </label>
 
@@ -87,8 +127,24 @@ export function LoginForm({ locale }: { locale: AppLocale }) {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoComplete="current-password"
+            disabled={needsTotp}
           />
         </label>
+
+        {needsTotp ? (
+          <label className="flex flex-col gap-1 text-sm">
+            {locale === "he" ? "קוד אימות" : "Authentication code"}
+            <input
+              name="otp"
+              data-testid="otp-code"
+              className="rounded-xl border px-3 py-2 border-[var(--color-border)] bg-transparent outline-none"
+              value={otp}
+              onChange={(e) => setOtp(e.target.value)}
+              autoComplete="one-time-code"
+              inputMode="numeric"
+            />
+          </label>
+        ) : null}
 
         {error ? (
           <div className="text-sm text-[var(--color-primary-dark)]">{error}</div>

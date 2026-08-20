@@ -29,6 +29,9 @@ import {
   toCalendarEvent,
 } from "@/lib/appointment-service";
 import { listPatientResources, listResources } from "@/lib/resource-service";
+import { PatientCarePanel } from "@/components/patient-care-panel";
+import { listPatientAssessments } from "@/lib/assessment-service";
+import { listPatientPlans } from "@/lib/treatment-plan-service";
 
 export default async function PatientDetailPage({
   params,
@@ -46,18 +49,21 @@ export default async function PatientDetailPage({
   const { locale, id } = await params;
   const { section, editNote, portalUser, tempPassword, portalError } =
     await searchParams;
-  const activeSection = section === "logs" ? "logs" : "info";
+  const activeSection =
+    section === "logs" ? "logs" : section === "care" ? "care" : "info";
 
   const patient = await getPatient(id);
   if (!patient) notFound();
 
-  const [notes, suggestedSession, meetings, resources, assigned] =
+  const [notes, suggestedSession, meetings, resources, assigned, plans, assessments] =
     await Promise.all([
       listNotes(patient.id),
       nextSessionNumber(patient.id),
       listPatientAppointments(patient.id),
       listResources(),
       listPatientResources(patient.id),
+      listPatientPlans(patient.id),
+      listPatientAssessments(patient.id),
     ]);
   const savePatient = updatePatientAction.bind(null, locale, patient.id);
   const saveNote = addNoteAction.bind(null, locale, patient.id);
@@ -104,9 +110,26 @@ export default async function PatientDetailPage({
         >
           {t(locale, "Meeting Logs", "יומני מפגש")}
         </Link>
+        <Link
+          href={`/${locale}/patients/${patient.id}?section=care`}
+          className={`rounded-full px-4 py-1.5 text-sm font-medium border ${
+            activeSection === "care"
+              ? "bg-[var(--color-primary)] text-[var(--color-surface)] border-transparent"
+              : "border-[var(--color-border)]"
+          }`}
+        >
+          {t(locale, "Care", "טיפול")}
+        </Link>
       </div>
 
-      {activeSection === "info" ? (
+      {activeSection === "care" ? (
+        <PatientCarePanel
+          locale={locale}
+          patientId={patient.id}
+          plans={plans}
+          assessments={assessments}
+        />
+      ) : activeSection === "info" ? (
         <>
         <form
           action={savePatient}

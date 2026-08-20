@@ -9,6 +9,8 @@ const staffPrefixes = [
   "/messages",
   "/groups",
   "/resources",
+  "/settings",
+  "/inquiries",
 ];
 
 export async function middleware(req: NextRequest) {

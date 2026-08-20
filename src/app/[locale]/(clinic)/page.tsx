@@ -1,6 +1,7 @@
 import { sendDueAppointmentReminders } from "@/lib/cancel-service";
 import { countPendingCancelRequests } from "@/lib/cancel-service";
 import { t } from "@/lib/copy";
+import { listAppointmentsInRange } from "@/lib/appointment-service";
 import { prisma } from "@/lib/prisma";
 
 export default async function DashboardPage({
@@ -16,32 +17,24 @@ export default async function DashboardPage({
   start.setHours(0, 0, 0, 0);
   const end = new Date(start);
   end.setDate(end.getDate() + 1);
+  const rangeEnd = new Date(start);
+  rangeEnd.setDate(rangeEnd.getDate() + 26 * 7);
 
-  const [patientCount, waitingCount, pendingCancels, upcoming, today] =
-    await Promise.all([
-      prisma.patient.count(),
-      prisma.patient.count({ where: { status: "WAITING" } }),
-      countPendingCancelRequests(),
-      prisma.appointment.findMany({
-        where: {
-          startAt: { gte: new Date() },
-          kind: "APPOINTMENT",
-          status: { not: "CANCELLED" },
-        },
-        orderBy: { startAt: "asc" },
-        take: 5,
-        include: { patient: true },
-      }),
-      prisma.appointment.findMany({
-        where: {
-          startAt: { gte: start, lt: end },
-          kind: "APPOINTMENT",
-          status: { not: "CANCELLED" },
-        },
-        orderBy: { startAt: "asc" },
-        include: { patient: true },
-      }),
-    ]);
+  const [patientCount, waitingCount, pendingCancels, range] = await Promise.all([
+    prisma.patient.count(),
+    prisma.patient.count({ where: { status: "WAITING" } }),
+    countPendingCancelRequests(),
+    listAppointmentsInRange(start, rangeEnd),
+  ]);
+  const today = range.filter(
+    (row) =>
+      row.kind === "APPOINTMENT" &&
+      row.startAt >= start &&
+      row.startAt < end
+  );
+  const upcoming = range
+    .filter((row) => row.kind === "APPOINTMENT" && row.startAt >= new Date())
+    .slice(0, 5);
 
   return (
     <div className="max-w-3xl">
@@ -95,7 +88,7 @@ export default async function DashboardPage({
           <ul className="flex flex-col gap-2">
             {today.map((a) => (
               <li
-                key={a.id}
+                key={`${a.id}__${a.startAt.toISOString()}`}
                 className="rounded-xl bg-[var(--color-primary-container)]/40 border border-[var(--color-border)] p-3"
               >
                 <div className="font-medium">
@@ -124,7 +117,7 @@ export default async function DashboardPage({
           <ul className="flex flex-col gap-2">
             {upcoming.map((a) => (
               <li
-                key={a.id}
+                key={`${a.id}__${a.startAt.toISOString()}`}
                 className="rounded-xl bg-[var(--color-primary-container)]/40 border border-[var(--color-border)] p-3"
               >
                 <div className="font-medium">

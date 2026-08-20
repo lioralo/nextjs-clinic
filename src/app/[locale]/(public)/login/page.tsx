@@ -13,7 +13,7 @@ export default async function LoginPage({
   const locale = normalizeLocale(raw) ?? "he";
   const user = await getSessionUser();
   if (user) {
-    redirect(`/${locale}`);
+    redirect(user.role === "PATIENT" ? `/${locale}/patient` : `/${locale}`);
   }
 
   return (

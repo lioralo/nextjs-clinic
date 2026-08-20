@@ -3,6 +3,7 @@ import type { NextAuthOptions } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 
 import { prisma } from "./prisma";
+import { verifyUserSecondFactor } from "./totp-service";
 
 export const authOptions: NextAuthOptions = {
   session: {
@@ -14,6 +15,7 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         username: { label: "Username", type: "text" },
         password: { label: "Password", type: "password" },
+        otp: { label: "OTP", type: "text" },
       },
       async authorize(credentials) {
         const username = credentials?.username;
@@ -25,6 +27,15 @@ export const authOptions: NextAuthOptions = {
 
         const ok = await bcrypt.compare(password, user.passwordHash);
         if (!ok) return null;
+
+        const second = await verifyUserSecondFactor({
+          totpEnabled: user.totpEnabled,
+          totpSecret: user.totpSecret,
+          totpRecoveryHashes: user.totpRecoveryHashes,
+          otp: String(credentials?.otp ?? ""),
+          userId: user.id,
+        });
+        if (!second.ok) return null;
 
         return {
           id: user.id,
@@ -68,4 +79,3 @@ export const authOptions: NextAuthOptions = {
     },
   },
 };
-
