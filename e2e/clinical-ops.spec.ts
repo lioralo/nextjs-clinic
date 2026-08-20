@@ -1,6 +1,29 @@
 import { test, expect } from "@playwright/test";
+import bcrypt from "bcryptjs";
 
 import { login } from "./auth";
+import { prisma } from "../src/lib/prisma";
+
+test.beforeAll(async () => {
+  const patient = await prisma.patient.findFirst({
+    where: { firstName: "Test", lastName: "Patient" },
+  });
+  if (!patient) return;
+  const existing = await prisma.user.findUnique({ where: { username: "portal" } });
+  if (!existing) {
+    await prisma.user.create({
+      data: {
+        username: "portal",
+        passwordHash: await bcrypt.hash("portal-password", 12),
+        role: "PATIENT",
+        patientId: patient.id,
+        email: patient.email,
+        forcePasswordChange: false,
+        isActive: true,
+      },
+    });
+  }
+});
 
 test("public contact form reaches the staff inquiry list", async ({ page }) => {
   const message = `E2E inquiry ${Date.now()}`;
@@ -38,8 +61,11 @@ test("staff can create a shared treatment plan, take PHQ-9, and portal sees the 
 
   await page.getByTestId("logout").click();
   await expect(page.getByTestId("login-form")).toBeVisible({ timeout: 15_000 });
+  await page.goto("/he/login");
+  await expect(page.getByTestId("login-form")).toBeVisible();
   await page.locator('input[name="username"]').fill("portal");
   await page.locator('input[name="password"]').fill("portal-password");
+  await expect(page.locator('input[name="username"]')).toHaveValue("portal");
   await page.getByRole("button", { name: /התחבר/i }).click();
   await expect(page.getByTestId("patient-home")).toBeVisible({ timeout: 15_000 });
   await expect(page.getByTestId("portal-plans")).toContainText("E2E GAD");
