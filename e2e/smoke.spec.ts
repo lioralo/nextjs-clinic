@@ -10,6 +10,17 @@ test("login page shows the clinic logo", async ({ page }) => {
   await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
 });
 
+test("wrong password shows a visible error", async ({ page }) => {
+  await page.goto("/he/login");
+  await page.locator('input[name="username"]').fill("admin");
+  await page.locator('input[name="password"]').fill("not-the-password");
+  await page.getByRole("button", { name: /התחבר/i }).click();
+  await expect(page.getByTestId("login-error")).toBeVisible();
+  await expect(page.getByTestId("login-error")).toContainText(
+    /שגויים|incorrect|db:seed|מסד הנתונים/i
+  );
+});
+
 test("login as admin and loads seeded patients", async ({ page }) => {
   await login(page);
 
