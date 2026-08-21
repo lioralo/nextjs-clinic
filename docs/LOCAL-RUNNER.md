@@ -1,14 +1,18 @@
 # Local runner
 
-The local runner is [`scripts/local-run.sh`](../scripts/local-run.sh). It is the supported way to **apply repo updates and run the clinic app** on a laptop without remembering migrate/seed/install order.
+The local runner is [`scripts/local-run.mjs`](../scripts/local-run.mjs). It is the supported way to **apply repo updates and run the clinic app** on a laptop (Windows `cmd`, PowerShell, Git Bash, macOS, Linux) without remembering migrate/seed/install order.
 
-Requires: `bash`, `git`, `npm`, Node 22 (same as CI).
+Requires: Node 22 (same as CI), `git`, `npm`. Bash is optional.
 
 ## Daily use
 
 ```bash
+git checkout main
+git pull origin main
 npm run local
 ```
+
+If npm says `Missing script: "local"`, this checkout is **not** on latest `main` yet. Run the two git commands above, then `npm run` — you should see `local`, `local:update`, `local:dev`.
 
 That is the default `up` command: update the checkout, then start Next.js on port 3000.
 
@@ -23,12 +27,14 @@ Open [http://localhost:3000/he/login](http://localhost:3000/he/login).
 
 | npm script | Shell equivalent | Effect |
 |------------|------------------|--------|
-| `npm run local` | `bash scripts/local-run.sh` | `update` then `next dev` |
-| `npm run local:update` | `bash scripts/local-run.sh update` | Pull, install, migrate, seed; **no** server |
-| `npm run local:dev` | `bash scripts/local-run.sh dev` | Start Next.js only |
-| `npm run local:check` | `bash scripts/local-run.sh check` | `npm test` + `npx next build` |
-| `npm run local:e2e` | `bash scripts/local-run.sh e2e` | `update` then Playwright |
-| `npm run local -- help` | `bash scripts/local-run.sh help` | Print usage |
+| `npm run local` | `node scripts/local-run.mjs` | `update` then `next dev` |
+| `npm run local:update` | `node scripts/local-run.mjs update` | Pull, install, migrate, seed; **no** server |
+| `npm run local:dev` | `node scripts/local-run.mjs dev` | Start Next.js only |
+| `npm run local:check` | `node scripts/local-run.mjs check` | `npm test` + `npx next build` |
+| `npm run local:e2e` | `node scripts/local-run.mjs e2e` | `update` then Playwright |
+| `npm run local -- help` | `node scripts/local-run.mjs help` | Print usage |
+
+`bash scripts/local-run.sh` still works; it only forwards to the Node script.
 
 Pass flags after `--` with npm:
 
@@ -36,8 +42,16 @@ Pass flags after `--` with npm:
 npm run local -- --no-pull
 npm run local:update -- --no-seed
 npm run local -- --kill-port
-PORT=3001 npm run local:dev
 ```
+
+On Windows cmd:
+
+```bat
+set PORT=3001
+npm run local:dev
+```
+
+On Unix: `PORT=3001 npm run local:dev`.
 
 | Flag | Meaning |
 |------|---------|
@@ -45,7 +59,7 @@ PORT=3001 npm run local:dev
 | `--no-seed` | Skip `npm run db:seed` |
 | `--kill-port` | Stop whatever is listening on `PORT` (default 3000) before `next dev` |
 
-After a fresh `git clone`, `bash scripts/local-run.sh` works even before you have run `npm install` (the script runs install itself).
+After a fresh `git clone`, `node scripts/local-run.mjs` works even before you have run `npm install` (the script runs install itself).
 
 ## What `update` does, in order
 
@@ -65,7 +79,7 @@ flowchart TD
 4. **Database** — `npx prisma generate` then `npx prisma migrate deploy` (same non-interactive path as GitHub Actions). This **applies** migrations from `prisma/migrations/`; it does not create new ones.
 5. **Seed** — Idempotent: creates `admin` if missing, upserts **Test Patient**, creates portal user `portal` if missing, ensures PHQ-9 / GAD-7 types.
 
-`up` then prints the login URLs and `exec`s `npm run dev -- --port $PORT`.
+`up` then prints the login URLs and starts `npm run dev -- --port $PORT`.
 
 ## Creating migrations vs applying them
 
@@ -83,13 +97,25 @@ Do not use `migrate dev` in the runner: it can prompt for a migration name and i
 ```bash
 git clone https://github.com/lioralo/nextjs-clinic.git
 cd nextjs-clinic
-bash scripts/local-run.sh
+git checkout main
+git pull origin main
+node scripts/local-run.mjs
 ```
 
 **Already cloned, just want latest `main`**
 
 ```bash
 git checkout main
+git pull origin main
+npm run local
+```
+
+Windows `cmd.exe`:
+
+```bat
+cd C:\Users\liora\Projects\nextjs-clinic
+git checkout main
+git pull origin main
 npm run local
 ```
 
@@ -101,6 +127,7 @@ If you have uncommitted files, the runner **will not pull**. Commit or stash, or
 
 | Symptom | Cause | Fix |
 |---------|--------|-----|
+| `Missing script: "local"` | Checkout is behind `main` | `git checkout main` then `git pull origin main` |
 | `warning: Working tree is dirty; skip git pull` | Uncommitted files | Stash/commit, or `--no-pull` after a manual pull |
 | `git pull --ff-only failed` | Local branch diverged | `git status`; rebase or reset to origin only if you intend to drop local commits |
 | `Port 3000 is already in use` | Leftover `next dev` | Stop it, or `npm run local -- --kill-port` |
@@ -109,7 +136,6 @@ If you have uncommitted files, the runner **will not pull**. Commit or stash, or
 | Prisma client missing after pull | Generate did not run | `npm run local:update` |
 | `migrate deploy` errors on SQLite | DB from an older tree | Keep `dev.db` or delete it (loses local data) and re-run `local:update` |
 | Seed does not change the admin password | User already exists | Seed only **creates** admin; change password in the DB or delete that user |
-| Windows `bash: command not found` | No Git Bash | Install Git for Windows and run from Git Bash, or WSL |
 
 CI (`.github/workflows/test.yml`) does not call the runner; it repeats the same migrate deploy + seed + test + e2e steps so GitHub stays non-interactive.
 
