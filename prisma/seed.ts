@@ -5,21 +5,35 @@ import { ensureAssessmentTypes } from "../src/lib/assessment-service";
 async function main() {
   const username = process.env.ADMIN_USERNAME ?? "admin";
   const password = process.env.ADMIN_PASSWORD ?? "admin-password";
+  const passwordHash = await bcrypt.hash(password, 12);
 
   const existing = await prisma.user.findUnique({
     where: { username },
   });
 
   if (!existing) {
-    const passwordHash = await bcrypt.hash(password, 12);
-
     await prisma.user.create({
       data: {
         username,
         passwordHash,
         role: "ADMIN",
+        isActive: true,
       },
     });
+    console.log(`Created staff user "${username}"`);
+  } else {
+    await prisma.user.update({
+      where: { username },
+      data: {
+        passwordHash,
+        isActive: true,
+        role: existing.role === "PATIENT" ? existing.role : "ADMIN",
+        totpEnabled: false,
+        totpSecret: null,
+        totpRecoveryHashes: null,
+      },
+    });
+    console.log(`Reset password for staff user "${username}"`);
   }
 
   const sample = await prisma.patient.findFirst({
@@ -51,6 +65,7 @@ async function main() {
 
   if (patient) {
     const portalUsername = "portal";
+    const portalHash = await bcrypt.hash("portal-password", 12);
     const existingPortal = await prisma.user.findUnique({
       where: { username: portalUsername },
     });
@@ -58,7 +73,7 @@ async function main() {
       await prisma.user.create({
         data: {
           username: portalUsername,
-          passwordHash: await bcrypt.hash("portal-password", 12),
+          passwordHash: portalHash,
           role: "PATIENT",
           patientId: patient.id,
           email: patient.email,
@@ -66,6 +81,20 @@ async function main() {
           isActive: true,
         },
       });
+      console.log(`Created portal user "${portalUsername}"`);
+    } else {
+      await prisma.user.update({
+        where: { username: portalUsername },
+        data: {
+          passwordHash: portalHash,
+          isActive: true,
+          forcePasswordChange: false,
+          totpEnabled: false,
+          totpSecret: null,
+          totpRecoveryHashes: null,
+        },
+      });
+      console.log(`Reset password for portal user "${portalUsername}"`);
     }
   }
 

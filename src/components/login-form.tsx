@@ -18,7 +18,7 @@ export function LoginForm({ locale }: { locale: AppLocale }) {
 
   async function completeSignIn() {
     const res = await signIn("credentials", {
-      username,
+      username: username.trim(),
       password,
       otp,
       redirect: false,
@@ -56,18 +56,19 @@ export function LoginForm({ locale }: { locale: AppLocale }) {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
+    const usernameTrimmed = username.trim();
 
     if (!needsTotp) {
       const preflight = await fetch("/api/auth/preflight", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username: usernameTrimmed, password }),
       });
-      const result = (await preflight.json()) as {
+      const result = (await preflight.json().catch(() => null)) as {
         ok?: boolean;
         needsTotp?: boolean;
-      };
-      if (!result.ok) {
+      } | null;
+      if (!result?.ok) {
         setSubmitting(false);
         setError(
           t(
