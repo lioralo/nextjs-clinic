@@ -42,7 +42,7 @@ export function AssessmentForm({
     <form action={action} className="flex flex-col gap-3" data-testid="assessment-form">
       <select
         name="typeKey"
-        value={typeKey}
+        defaultValue={typeKey}
         onChange={(event) => setTypeKey(event.target.value)}
         data-testid="assessment-type"
         className="rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"

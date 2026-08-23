@@ -41,10 +41,18 @@ export async function ensureAssessmentTypes() {
 
 export async function listAssessmentTypes(includeInactive = false) {
   await ensureAssessmentTypes();
-  return prisma.assessmentType.findMany({
+  const rows = await prisma.assessmentType.findMany({
     where: includeInactive ? undefined : { isActive: true },
     orderBy: { name: "asc" },
   });
+  const catalogOrder = new Map(
+    ASSESSMENT_CATALOG.map((item, index) => [item.key, index])
+  );
+  return rows.sort(
+    (a, b) =>
+      (catalogOrder.get(a.key) ?? Number.MAX_SAFE_INTEGER) -
+      (catalogOrder.get(b.key) ?? Number.MAX_SAFE_INTEGER)
+  );
 }
 
 export async function getAssessmentType(key: string) {

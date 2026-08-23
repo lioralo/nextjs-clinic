@@ -52,7 +52,8 @@ test("staff can create a shared treatment plan, take PHQ-9, and portal sees the 
   await page.getByTestId("create-plan").click();
   await expect(page.getByTestId("treatment-plans")).toContainText("E2E GAD");
 
-  await page.getByTestId("assessment-type").selectOption("PHQ-9");
+  await page.getByTestId("assessment-type").selectOption({ label: /PHQ-9/ });
+  await expect(page.locator('input[name="q_8"][value="0"]')).toBeVisible();
   for (let index = 0; index < 9; index += 1) {
     await page.locator(`input[name="q_${index}"][value="0"]`).check();
   }
