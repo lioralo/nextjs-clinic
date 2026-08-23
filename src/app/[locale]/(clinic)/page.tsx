@@ -38,7 +38,7 @@ export default async function DashboardPage({
     .slice(0, 5);
 
   return (
-    <div className="max-w-3xl">
+    <div className="w-full min-w-0">
       <h1 className="text-2xl font-semibold mb-2">
         {t(locale, "Dashboard", "לוח הבקרה")}
       </h1>

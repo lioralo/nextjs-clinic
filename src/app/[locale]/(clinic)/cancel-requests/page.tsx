@@ -2,6 +2,7 @@ import {
   approveCancelAction,
   rejectCancelAction,
 } from "@/app/[locale]/(clinic)/cancel-requests/actions";
+import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { listPendingCancelRequests } from "@/lib/cancel-service";
 import { t } from "@/lib/copy";
 
@@ -14,7 +15,7 @@ export default async function CancelRequestsPage({
   const requests = await listPendingCancelRequests();
 
   return (
-    <div className="max-w-3xl">
+    <div className="w-full min-w-0">
       <h1 className="text-2xl font-semibold mb-1">
         {t(locale, "Cancel requests", "בקשות ביטול")}
       </h1>
@@ -43,24 +44,34 @@ export default async function CancelRequestsPage({
                 {request.appointment.startAt.toLocaleString(locale)}
               </div>
               <p className="mt-2 whitespace-pre-wrap">{request.reason}</p>
-              <div className="mt-3 flex gap-2">
-                <form action={approveCancelAction.bind(null, locale, request.id)}>
-                  <button
-                    type="submit"
-                    data-testid="approve-cancel"
-                    className="rounded-xl bg-[var(--color-primary)] text-[var(--color-surface)] px-4 py-2 font-semibold"
-                  >
-                    {t(locale, "Approve", "אשר")}
-                  </button>
-                </form>
-                <form action={rejectCancelAction.bind(null, locale, request.id)}>
-                  <button
-                    type="submit"
-                    className="rounded-xl border border-[var(--color-border)] px-4 py-2"
-                  >
-                    {t(locale, "Reject", "דחה")}
-                  </button>
-                </form>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <ConfirmActionDialog
+                  locale={locale}
+                  title={t(locale, "Approve cancellation?", "לאשר ביטול?")}
+                  description={t(
+                    locale,
+                    "The meeting will be cancelled.",
+                    "הפגישה תבוטל."
+                  )}
+                  confirmLabel={t(locale, "Approve", "אשר")}
+                  triggerLabel={t(locale, "Approve", "אשר")}
+                  triggerTestId="approve-cancel"
+                  dialogTestId="approve-cancel-dialog"
+                  action={approveCancelAction.bind(null, locale, request.id)}
+                />
+                <ConfirmActionDialog
+                  locale={locale}
+                  title={t(locale, "Reject request?", "לדחות בקשה?")}
+                  description={t(
+                    locale,
+                    "The meeting will stay scheduled.",
+                    "הפגישה תישאר ביומן."
+                  )}
+                  confirmLabel={t(locale, "Reject", "דחה")}
+                  triggerLabel={t(locale, "Reject", "דחה")}
+                  dialogTestId="reject-cancel-dialog"
+                  action={rejectCancelAction.bind(null, locale, request.id)}
+                />
               </div>
             </li>
           ))}

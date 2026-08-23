@@ -15,12 +15,13 @@ Hebrew is the default. Every locale URL is `/{he|en}/...`.
 | `/{locale}` | לוח הבקרה / Dashboard | Today and upcoming appointments (recurrence expanded), patient and waiting counts, pending cancellations |
 | `/{locale}/patients` | מטופלים | CRM list with status filters (all / candidate+waiting / ongoing / archived) |
 | `/{locale}/patients/new` | New patient | Create a record (`CANDIDATE` by default unless set otherwise) |
-| `/{locale}/patients/[id]` | Patient file | Demographics, portal grant, resources, calendar jumps; `?section=logs` meeting notes; `?section=care` plans and assessments |
-| `/{locale}/calendar` | יומן | Week time-grid: appointments, vacancies, blocks, group sessions; booking popup; publish public booking link |
-| `/{locale}/cancel-requests` | בקשות ביטול | Approve or reject portal cancel requests |
+| `/{locale}/patients/[id]` | Patient file | Dialogs for demographics, portal grant, resource assign; `?section=logs` meeting notes; `?section=care` plans and assessments |
+| `/{locale}/calendar` | יומן | Full-width week time-grid; booking popup; publish public booking link |
+| `/{locale}/cancel-requests` | בקשות ביטול | Approve or reject portal cancel requests (confirm dialog) |
 | `/{locale}/messages` | הודעות | Staff–patient threads and broadcasts |
 | `/{locale}/groups` | קבוצות | Therapy groups, members, sessions, attendance |
-| `/{locale}/resources` | משאבים | Resource library and assignment |
+| `/{locale}/resources` | משאבים | Folder tree + URL files; assignment ACL |
+| `/{locale}/questionnaires` | שאלונים | Manage assessment definitions; CSV/TSV import (Google Sheets export / Docs paste) |
 | `/{locale}/inquiries` | פניות | Public contact form submissions (mark read / delete) |
 | `/{locale}/settings` | הגדרות | Staff TOTP setup |
 
@@ -28,7 +29,13 @@ Hebrew is the default. Every locale URL is `/{he|en}/...`.
 
 - **Overview** — name, phone, email, status (`ONGOING`, `CANDIDATE`, `WAITING`, `ARCHIVED`), type (`PRIVATE`, `RESIDENCY`, `GROUP`, `INITIAL_INTAKE`), grant portal access (temp password, `forcePasswordChange`).
 - **Logs (`?section=logs`)** — session notes; optional share-with-patient.
-- **Care (`?section=care`)** — treatment plans + goals (progress 0–100, share-with-patient); PHQ-9 and GAD-7 take-and-score.
+- **Care (`?section=care`)** — treatment plans + goals (progress 0–100, share-with-patient); take active questionnaires (seeded PHQ-9/GAD-7 plus staff-managed types).
+
+### Questionnaires
+
+- Staff manage definitions under `/{locale}/questionnaires`.
+- Import via CSV/TSV paste (`text_en,text_he` or one question per line) — compatible with Google Sheets **File → Download → CSV** and Docs table paste. No Google OAuth.
+- Takes store answer JSON plus a question-text snapshot.
 
 ### Calendar behavior
 

@@ -57,6 +57,10 @@ export function clinicNav(locale: AppLocale): ClinicNavGroup[] {
           label: t(locale, "Resources", "משאבים"),
         },
         {
+          href: `/${locale}/questionnaires`,
+          label: t(locale, "Questionnaires", "שאלונים"),
+        },
+        {
           href: `/${locale}/inquiries`,
           label: t(locale, "Inquiries", "פניות"),
         },
@@ -98,6 +102,9 @@ export function pageTitleFromPath(locale: AppLocale, pathname: string) {
   if (path.startsWith("/messages")) return t(locale, "Messages", "הודעות");
   if (path.startsWith("/groups")) return t(locale, "Groups", "קבוצות");
   if (path.startsWith("/resources")) return t(locale, "Resources", "משאבים");
+  if (path.startsWith("/questionnaires")) {
+    return t(locale, "Questionnaires", "שאלונים");
+  }
   if (path.startsWith("/inquiries")) return t(locale, "Inquiries", "פניות");
   if (path.startsWith("/settings")) return t(locale, "Settings", "הגדרות");
   if (path.startsWith("/patient")) return t(locale, "Patient portal", "פורטל מטופל");

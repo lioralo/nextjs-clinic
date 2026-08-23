@@ -9,6 +9,7 @@ import { t } from "@/lib/copy";
 import type { AppLocale } from "@/lib/locale";
 import type { listPatientAssessments } from "@/lib/assessment-service";
 import type { listPatientPlans } from "@/lib/treatment-plan-service";
+import type { AssessmentDefinition } from "@/lib/questionnaire-definition";
 
 type Plans = Awaited<ReturnType<typeof listPatientPlans>>;
 type Assessments = Awaited<ReturnType<typeof listPatientAssessments>>;
@@ -18,11 +19,19 @@ export function PatientCarePanel({
   patientId,
   plans,
   assessments,
+  questionnaireTypes,
 }: {
   locale: AppLocale;
   patientId: string;
   plans: Plans;
   assessments: Assessments;
+  questionnaireTypes: {
+    key: string;
+    name: string;
+    description: string | null;
+    descriptionHe: string | null;
+    definition: AssessmentDefinition;
+  }[];
 }) {
   const createPlan = createPlanAction.bind(null, locale, patientId);
   const take = takeAssessmentAction.bind(null, locale, patientId);
@@ -139,7 +148,7 @@ export function PatientCarePanel({
         <h2 className="text-lg font-semibold mb-2">
           {t(locale, "Assessments", "שאלונים")}
         </h2>
-        <AssessmentForm locale={locale} action={take} />
+        <AssessmentForm locale={locale} action={take} types={questionnaireTypes} />
         <ul className="mt-4 flex flex-col gap-2">
           {assessments.map((row) => (
             <li

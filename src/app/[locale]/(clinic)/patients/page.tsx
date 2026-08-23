@@ -42,7 +42,7 @@ export default async function PatientsPage({
   const patients = await listCrmPatients({ status, q });
 
   return (
-    <div className="max-w-6xl">
+    <div className="w-full min-w-0">
       <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
         <div>
           <h1 className="text-2xl font-semibold mb-1">

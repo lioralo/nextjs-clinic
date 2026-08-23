@@ -39,7 +39,7 @@ export default async function CalendarPage({
   ]);
 
   return (
-    <div className="max-w-7xl">
+    <div className="w-full min-w-0">
       <h1 className="text-2xl font-semibold mb-1">
         {t(locale, "Weekly Snapshot Calendar", "יומן תמונת מצב שבועית")}
       </h1>

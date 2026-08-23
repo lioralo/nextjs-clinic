@@ -10,7 +10,7 @@ export default async function NewPatientPage({
   const action = createPatientAction.bind(null, locale);
 
   return (
-    <div className="max-w-3xl">
+    <div className="w-full min-w-0">
       <div className="mb-4">
         <h1 className="text-2xl font-semibold mb-1">
           {t(locale, "New patient", "מטופל חדש")}

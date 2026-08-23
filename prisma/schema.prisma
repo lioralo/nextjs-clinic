@@ -320,17 +320,30 @@ model GroupAttendance {
   @@unique([sessionId, patientId])
 }
 
+model ResourceFolder {
+  id        String   @id @default(cuid())
+  name      String
+  parentId  String?
+  createdAt DateTime @default(now())
+
+  parent   ResourceFolder?  @relation("FolderTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children ResourceFolder[] @relation("FolderTree")
+  resources Resource[]
+}
+
 model Resource {
   id                    String   @id @default(cuid())
   title                 String
   description           String?
   url                   String
+  folderId              String?
   isPublic              Boolean  @default(false)
   allowPatientView      Boolean  @default(true)
   allowPatientDownload  Boolean  @default(true)
   notifyOnAssign        Boolean  @default(true)
   createdAt             DateTime @default(now())
 
+  folder      ResourceFolder?   @relation(fields: [folderId], references: [id], onDelete: SetNull)
   assignments PatientResource[]
 }
 
@@ -381,13 +394,16 @@ model TreatmentPlanGoal {
 }
 
 model AssessmentType {
-  id          String  @id @default(cuid())
-  key         String  @unique
-  name        String
-  description String?
-  minScore    Int
-  maxScore    Int
-  isActive    Boolean @default(true)
+  id             String  @id @default(cuid())
+  key            String  @unique
+  name           String
+  description    String?
+  descriptionHe  String?
+  minScore       Int
+  maxScore       Int
+  isActive       Boolean @default(true)
+  /// JSON: questions [{en,he}], options [{value,en,he}], bands [{min,max,severity,en,he}]
+  definitionJson String?
 
   assessments Assessment[]
 }
@@ -398,6 +414,8 @@ model Assessment {
   typeId         String
   takenById      String
   answersJson    String
+  /// Snapshot of question labels at take time
+  questionsJson  String?
   totalScore     Int
   severityLevel  String
   interpretation String

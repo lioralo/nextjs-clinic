@@ -16,12 +16,16 @@ import {
 } from "@/lib/messaging-service";
 import { prisma } from "@/lib/prisma";
 import { getPortalPatient } from "@/lib/portal-service";
-import { listPatientResources } from "@/lib/resource-service";
 import { takePortalAssessmentAction } from "@/app/[locale]/(portal)/patient/care-actions";
 import { AssessmentForm } from "@/components/assessment-form";
-import { listPatientAssessments } from "@/lib/assessment-service";
+import {
+  listAssessmentTypes,
+  listPatientAssessments,
+  resolveDefinition,
+} from "@/lib/assessment-service";
 import { listSharedPatientPlans } from "@/lib/treatment-plan-service";
 import { getSessionUser } from "@/lib/session";
+import { listVisiblePortalResources } from "@/lib/resource-service";
 
 export default async function PatientHomePage({
   params,
@@ -38,7 +42,7 @@ export default async function PatientHomePage({
   }
 
   const staff = await getPrimaryStaffUser();
-  const [meetings, groups, notes, resources, notifications, thread, plans, assessments] =
+  const [meetings, groups, notes, resources, notifications, thread, plans, assessments, questionnaireTypesRaw] =
     await Promise.all([
       listPatientAppointments(portal.patient.id),
       listPatientGroupSessions(portal.patient.id),
@@ -47,12 +51,26 @@ export default async function PatientHomePage({
         orderBy: { createdAt: "desc" },
         take: 10,
       }),
-      listPatientResources(portal.patient.id),
+      listVisiblePortalResources(portal.patient.id),
       listNotifications(user.id),
       staff ? listThread(user.id, staff.id) : Promise.resolve([]),
       listSharedPatientPlans(portal.patient.id),
       listPatientAssessments(portal.patient.id),
+      listAssessmentTypes(),
     ]);
+  const questionnaireTypes = questionnaireTypesRaw
+    .map((type) => {
+      const definition = resolveDefinition(type);
+      if (!definition) return null;
+      return {
+        key: type.key,
+        name: type.name,
+        description: type.description,
+        descriptionHe: type.descriptionHe,
+        definition,
+      };
+    })
+    .filter((item): item is NonNullable<typeof item> => Boolean(item));
   const upcoming = meetings.filter((row) => row.startAt.getTime() >= Date.now());
   const send = sendPatientMessageAction.bind(null, locale);
   const markRead = markPortalNotificationsReadAction.bind(null, locale);
@@ -213,6 +231,7 @@ export default async function PatientHomePage({
         <AssessmentForm
           locale={locale}
           action={takePortalAssessmentAction.bind(null, locale)}
+          types={questionnaireTypes}
         />
         <ul className="mt-3 flex flex-col gap-2" data-testid="portal-assessments">
           {assessments.map((row) => (
@@ -247,21 +266,25 @@ export default async function PatientHomePage({
           {t(locale, "Resources", "משאבים")}
         </h2>
         <ul className="flex flex-col gap-2" data-testid="portal-resources">
-          {resources
-            .filter((row) => row.resource.allowPatientView)
-            .map((row) => (
-              <li key={row.resourceId} className="flex items-center justify-between gap-2">
-                <span>{row.resource.title}</span>
+          {resources.map((resource) => (
+              <li key={resource.id} className="flex flex-col gap-1">
+                {resource.folderPath ? (
+                  <div className="text-xs text-[var(--color-foreground)]/55">
+                    {resource.folderPath}
+                  </div>
+                ) : null}
+                <div className="flex items-center justify-between gap-2">
+                <span>{resource.title}</span>
                 <span className="flex gap-2 text-sm">
                   <a
-                    href={`/api/resources/${row.resourceId}/open`}
+                    href={`/api/resources/${resource.id}/open`}
                     className="hover:underline"
                   >
                     {t(locale, "Open", "פתח")}
                   </a>
-                  {row.resource.allowPatientDownload ? (
+                  {resource.allowPatientDownload ? (
                     <a
-                      href={`/api/resources/${row.resourceId}/download`}
+                      href={`/api/resources/${resource.id}/download`}
                       data-testid="resource-download"
                       className="hover:underline"
                     >
@@ -269,6 +292,7 @@ export default async function PatientHomePage({
                     </a>
                   ) : null}
                 </span>
+                </div>
               </li>
             ))}
         </ul>

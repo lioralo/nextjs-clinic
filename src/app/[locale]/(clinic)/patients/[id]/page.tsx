@@ -10,27 +10,26 @@ import {
   updateNoteAction,
   updatePatientAction,
 } from "@/app/[locale]/(clinic)/patients/actions";
+import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
+import { PatientCarePanel } from "@/components/patient-care-panel";
+import { PatientOpsDialogs } from "@/components/patient-ops-dialogs";
 import {
-  PATIENT_STATUSES,
-  PATIENT_TYPES,
-  statusLabel,
-  t,
-  typeLabel,
-} from "@/lib/copy";
-import { toDateInputValue } from "@/lib/datetime";
-import { calendarFocusHref } from "@/lib/datetime";
+  listPatientAppointments,
+  toCalendarEvent,
+} from "@/lib/appointment-service";
+import {
+  listAssessmentTypes,
+  listPatientAssessments,
+  resolveDefinition,
+} from "@/lib/assessment-service";
+import { statusLabel, t, typeLabel } from "@/lib/copy";
+import { calendarFocusHref, toDateInputValue } from "@/lib/datetime";
 import {
   getPatient,
   listNotes,
   nextSessionNumber,
 } from "@/lib/patient-service";
-import {
-  listPatientAppointments,
-  toCalendarEvent,
-} from "@/lib/appointment-service";
 import { listPatientResources, listResources } from "@/lib/resource-service";
-import { PatientCarePanel } from "@/components/patient-care-panel";
-import { listPatientAssessments } from "@/lib/assessment-service";
 import { listPatientPlans } from "@/lib/treatment-plan-service";
 
 export default async function PatientDetailPage({
@@ -55,7 +54,7 @@ export default async function PatientDetailPage({
   const patient = await getPatient(id);
   if (!patient) notFound();
 
-  const [notes, suggestedSession, meetings, resources, assigned, plans, assessments] =
+  const [notes, suggestedSession, meetings, resources, assigned, plans, assessments, questionnaireTypesRaw] =
     await Promise.all([
       listNotes(patient.id),
       nextSessionNumber(patient.id),
@@ -64,14 +63,28 @@ export default async function PatientDetailPage({
       listPatientResources(patient.id),
       listPatientPlans(patient.id),
       listPatientAssessments(patient.id),
+      listAssessmentTypes(),
     ]);
+  const questionnaireTypes = questionnaireTypesRaw
+    .map((type) => {
+      const definition = resolveDefinition(type);
+      if (!definition) return null;
+      return {
+        key: type.key,
+        name: type.name,
+        description: type.description,
+        descriptionHe: type.descriptionHe,
+        definition,
+      };
+    })
+    .filter((item): item is NonNullable<typeof item> => Boolean(item));
   const savePatient = updatePatientAction.bind(null, locale, patient.id);
   const saveNote = addNoteAction.bind(null, locale, patient.id);
   const editing = notes.find((note) => note.id === editNote);
 
   return (
-    <div className="max-w-3xl">
-      <div className="mb-4 flex items-start justify-between gap-3">
+    <div className="w-full min-w-0">
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold mb-1">
             {patient.firstName} {patient.lastName}
@@ -83,18 +96,18 @@ export default async function PatientDetailPage({
         </div>
         <Link
           href={`/${locale}/patients`}
-          className="rounded-xl border border-[var(--color-border)] px-4 py-2"
+          className="inline-flex min-h-11 items-center rounded-xl border border-[var(--color-border)] px-4 py-2"
         >
           {t(locale, "Back to Patients", "חזרה למטופלים")}
         </Link>
       </div>
 
-      <div className="mb-4 flex gap-2">
+      <div className="mb-4 flex flex-wrap gap-2">
         <Link
           href={`/${locale}/patients/${patient.id}`}
-          className={`rounded-full px-4 py-1.5 text-sm font-medium border ${
+          className={`inline-flex min-h-11 items-center rounded-full border px-4 py-1.5 text-sm font-medium ${
             activeSection === "info"
-              ? "bg-[var(--color-primary)] text-[var(--color-surface)] border-transparent"
+              ? "border-transparent bg-[var(--color-primary)] text-[var(--color-surface)]"
               : "border-[var(--color-border)]"
           }`}
         >
@@ -102,9 +115,9 @@ export default async function PatientDetailPage({
         </Link>
         <Link
           href={`/${locale}/patients/${patient.id}?section=logs`}
-          className={`rounded-full px-4 py-1.5 text-sm font-medium border ${
+          className={`inline-flex min-h-11 items-center rounded-full border px-4 py-1.5 text-sm font-medium ${
             activeSection === "logs"
-              ? "bg-[var(--color-primary)] text-[var(--color-surface)] border-transparent"
+              ? "border-transparent bg-[var(--color-primary)] text-[var(--color-surface)]"
               : "border-[var(--color-border)]"
           }`}
         >
@@ -112,9 +125,9 @@ export default async function PatientDetailPage({
         </Link>
         <Link
           href={`/${locale}/patients/${patient.id}?section=care`}
-          className={`rounded-full px-4 py-1.5 text-sm font-medium border ${
+          className={`inline-flex min-h-11 items-center rounded-full border px-4 py-1.5 text-sm font-medium ${
             activeSection === "care"
-              ? "bg-[var(--color-primary)] text-[var(--color-surface)] border-transparent"
+              ? "border-transparent bg-[var(--color-primary)] text-[var(--color-surface)]"
               : "border-[var(--color-border)]"
           }`}
         >
@@ -128,273 +141,84 @@ export default async function PatientDetailPage({
           patientId={patient.id}
           plans={plans}
           assessments={assessments}
+          questionnaireTypes={questionnaireTypes}
         />
       ) : activeSection === "info" ? (
         <>
-        <form
-          action={savePatient}
-          className="rounded-2xl border bg-[var(--color-surface)] border-[var(--color-border)] p-5 flex flex-col gap-4"
-        >
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <label className="flex flex-col gap-1 text-sm">
-              {t(locale, "First name", "שם פרטי")}
-              <input
-                name="firstName"
-                defaultValue={patient.firstName}
-                className="rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"
-                required
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              {t(locale, "Last name", "שם משפחה")}
-              <input
-                name="lastName"
-                defaultValue={patient.lastName}
-                className="rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"
-                required
-              />
-            </label>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <label className="flex flex-col gap-1 text-sm">
-              {t(locale, "Status", "סטטוס")}
-              <select
-                name="status"
-                defaultValue={patient.status}
-                className="rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"
-              >
-                {PATIENT_STATUSES.map((status) => (
-                  <option key={status} value={status}>
-                    {statusLabel(locale, status)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              {t(locale, "Patient Type", "סוג מטופל")}
-              <select
-                name="patientType"
-                defaultValue={patient.patientType}
-                className="rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"
-              >
-                {PATIENT_TYPES.map((type) => (
-                  <option key={type} value={type}>
-                    {typeLabel(locale, type)}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <label className="flex flex-col gap-1 text-sm">
-              {t(locale, "Phone", "טלפון")}
-              <input
-                name="phone"
-                defaultValue={patient.phone ?? ""}
-                className="rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              {t(locale, "Email", "אימייל")}
-              <input
-                name="email"
-                type="email"
-                defaultValue={patient.email ?? ""}
-                className="rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"
-              />
-            </label>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <label className="flex flex-col gap-1 text-sm">
-              {t(locale, "Date of Birth", "תאריך לידה")}
-              <input
-                name="birthDate"
-                type="date"
-                defaultValue={
-                  patient.birthDate ? toDateInputValue(patient.birthDate) : ""
-                }
-                className="rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              {t(locale, "ID Number", "מספר תעודת זהות")}
-              <input
-                name="idNumber"
-                defaultValue={patient.idNumber ?? ""}
-                className="rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"
-              />
-            </label>
-          </div>
-
-          <label className="flex flex-col gap-1 text-sm">
-            {t(locale, "Notes", "הערות")}
-            <textarea
-              name="notesText"
-              defaultValue={patient.notesText ?? ""}
-              className="min-h-28 rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"
-            />
-          </label>
-
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              name="reminderEmailEnabled"
-              value="1"
-              defaultChecked={patient.reminderEmailEnabled}
-            />
-            {t(locale, "Email reminders", "תזכורות במייל")}
-          </label>
-
-          <div>
-            <button
-              type="submit"
-              className="rounded-xl bg-[var(--color-primary)] text-[var(--color-surface)] py-2 px-4 font-semibold hover:opacity-90"
-            >
-              {t(locale, "Save Patient Record", "שמירת תיק מטופל")}
-            </button>
-          </div>
-        </form>
-        <section className="mt-4 rounded-2xl border bg-[var(--color-surface)] border-[var(--color-border)] p-5">
-          <h2 className="text-lg font-semibold mb-2">
-            {t(locale, "Portal access", "גישת פורטל")}
-          </h2>
-          {patient.portalUser ? (
-            <p className="text-sm mb-2">
-              {t(locale, "Username", "שם משתמש")}: {patient.portalUser.username}
-            </p>
-          ) : (
-            <p className="text-sm text-[var(--color-foreground)]/70 mb-2">
-              {t(locale, "No portal user yet.", "אין עדיין משתמש פורטל.")}
-            </p>
-          )}
-          {portalUser ? (
-            <p className="text-sm mb-2" data-testid="portal-credentials">
-              {portalUser}
-              {tempPassword ? ` / ${tempPassword}` : ""}
-            </p>
-          ) : null}
-          {portalError ? (
-            <p className="text-sm text-[var(--color-primary-dark)]">{portalError}</p>
-          ) : null}
-          <form
-            action={grantPortalAction.bind(null, locale, patient.id)}
-            className="flex flex-col gap-2"
+          <PatientOpsDialogs
+            locale={locale}
+            patient={{
+              id: patient.id,
+              firstName: patient.firstName,
+              lastName: patient.lastName,
+              status: patient.status,
+              patientType: patient.patientType,
+              phone: patient.phone,
+              email: patient.email,
+              birthDate: patient.birthDate,
+              idNumber: patient.idNumber,
+              notesText: patient.notesText,
+              reminderEmailEnabled: patient.reminderEmailEnabled,
+              portalUsername: patient.portalUser?.username ?? null,
+            }}
+            resources={resources.map((resource) => ({
+              id: resource.id,
+              title: resource.title,
+            }))}
+            assignedResourceIds={assigned.map((row) => row.resourceId)}
+            portalUser={portalUser}
+            tempPassword={tempPassword}
+            portalError={portalError}
+            savePatient={savePatient}
+            grantPortal={grantPortalAction.bind(null, locale, patient.id)}
+            assignResource={assignResourceAction.bind(null, locale, patient.id)}
+            unassignResource={(resourceId) =>
+              unassignResourceAction.bind(null, locale, patient.id, resourceId)
+            }
+          />
+          <section
+            data-testid="patient-meetings"
+            className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5"
           >
-            <input
-              name="username"
-              defaultValue={patient.portalUser?.username ?? ""}
-              placeholder={t(locale, "Username", "שם משתמש")}
-              className="rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"
-            />
-            <input
-              name="email"
-              type="email"
-              defaultValue={patient.email ?? ""}
-              placeholder={t(locale, "Email", "אימייל")}
-              className="rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"
-            />
-            <button
-              type="submit"
-              data-testid="grant-portal"
-              className="rounded-xl bg-[var(--color-primary)] text-[var(--color-surface)] px-4 py-2 font-semibold"
-            >
-              {t(locale, "Grant portal access", "הענק גישת פורטל")}
-            </button>
-          </form>
-        </section>
-        <section className="mt-4 rounded-2xl border bg-[var(--color-surface)] border-[var(--color-border)] p-5">
-          <h2 className="text-lg font-semibold mb-2">
-            {t(locale, "Assigned resources", "משאבים משויכים")}
-          </h2>
-          <form
-            action={assignResourceAction.bind(null, locale, patient.id)}
-            className="mb-3 flex gap-2"
-          >
-            <select
-              name="resourceId"
-              data-testid="assign-resource"
-              className="flex-1 rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"
-            >
-              {resources.map((resource) => (
-                <option key={resource.id} value={resource.id}>
-                  {resource.title}
-                </option>
-              ))}
-            </select>
-            <button
-              type="submit"
-              data-testid="assign-resource-submit"
-              className="rounded-xl border border-[var(--color-border)] px-4 py-2"
-            >
-              {t(locale, "Assign", "שייך")}
-            </button>
-          </form>
-          <ul className="flex flex-col gap-2">
-            {assigned.map((row) => (
-              <li key={row.resourceId} className="flex items-center justify-between">
-                <span>{row.resource.title}</span>
-                <form
-                  action={unassignResourceAction.bind(
-                    null,
-                    locale,
-                    patient.id,
-                    row.resourceId
-                  )}
-                >
-                  <button type="submit" className="text-sm hover:underline">
-                    {t(locale, "Remove", "הסר")}
-                  </button>
-                </form>
-              </li>
-            ))}
-          </ul>
-        </section>
-        <section
-          data-testid="patient-meetings"
-          className="mt-4 rounded-2xl border bg-[var(--color-surface)] border-[var(--color-border)] p-5"
-        >
-          <h2 className="text-lg font-semibold mb-1">
-            {t(locale, "Meetings", "פגישות")}
-          </h2>
-          {meetings.length === 0 ? (
-            <p className="text-sm text-[var(--color-foreground)]/70">
-              {t(locale, "No meetings scheduled.", "אין פגישות מתוכננות.")}
-            </p>
-          ) : (
-            <ul className="flex flex-col gap-2">
-              {meetings.map((meeting) => {
-                const event = toCalendarEvent(meeting);
-                return (
-                  <li key={event.id}>
-                    <Link
-                      href={calendarFocusHref(
-                        locale,
-                        patient.id,
-                        meeting.startAt
-                      )}
-                      className="block rounded-xl border border-[var(--color-border)] px-3 py-2 hover:bg-[var(--color-primary-container)]"
-                    >
-                      {new Date(event.start).toLocaleString(locale, {
-                        dateStyle: "medium",
-                        timeStyle: "short",
-                      })}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </section>
+            <h2 className="mb-1 text-lg font-semibold">
+              {t(locale, "Meetings", "פגישות")}
+            </h2>
+            {meetings.length === 0 ? (
+              <p className="text-sm text-[var(--color-foreground)]/70">
+                {t(locale, "No meetings scheduled.", "אין פגישות מתוכננות.")}
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-2">
+                {meetings.map((meeting) => {
+                  const event = toCalendarEvent(meeting);
+                  return (
+                    <li key={event.id}>
+                      <Link
+                        href={calendarFocusHref(
+                          locale,
+                          patient.id,
+                          meeting.startAt
+                        )}
+                        className="block rounded-xl border border-[var(--color-border)] px-3 py-2 hover:bg-[var(--color-primary-container)]"
+                      >
+                        {new Date(event.start).toLocaleString(locale, {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        })}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
         </>
       ) : (
-        <section className="rounded-2xl border bg-[var(--color-surface)] border-[var(--color-border)] p-5">
-          <h2 className="text-lg font-semibold mb-1">
+        <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
+          <h2 className="mb-1 text-lg font-semibold">
             {t(locale, "Meeting Logs", "יומני מפגש")}
           </h2>
-          <p className="text-sm text-[var(--color-foreground)]/70 mb-4">
+          <p className="mb-4 text-sm text-[var(--color-foreground)]/70">
             {t(
               locale,
               "Document any call, update, or non-session encounter.",
@@ -409,18 +233,16 @@ export default async function PatientDetailPage({
                 : saveNote
             }
             data-testid="patient-notes-form"
-            className="flex flex-col gap-3 mb-5"
+            className="mb-5 flex flex-col gap-3"
           >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <label className="flex flex-col gap-1 text-sm">
                 {t(locale, "Session Number", "מספר מפגש")}
                 <input
                   name="sessionNumber"
                   type="number"
                   min={1}
-                  defaultValue={
-                    editing?.sessionNumber ?? suggestedSession
-                  }
+                  defaultValue={editing?.sessionNumber ?? suggestedSession}
                   className="rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"
                 />
               </label>
@@ -467,7 +289,7 @@ export default async function PatientDetailPage({
             <div className="flex gap-2">
               <button
                 type="submit"
-                className="rounded-xl bg-[var(--color-primary)] text-[var(--color-surface)] py-2 px-4 font-semibold hover:opacity-90"
+                className="rounded-xl bg-[var(--color-primary)] px-4 py-2 font-semibold text-[var(--color-surface)] hover:opacity-90"
               >
                 {editing
                   ? t(locale, "Save Log", "שמור יומן")
@@ -515,21 +337,24 @@ export default async function PatientDetailPage({
                       >
                         {t(locale, "Edit", "עריכה")}
                       </Link>
-                      <form
+                      <ConfirmActionDialog
+                        locale={locale}
+                        title={t(locale, "Delete log?", "למחוק יומן?")}
+                        description={t(
+                          locale,
+                          "This meeting log will be removed.",
+                          "יומן המפגש יימחק."
+                        )}
+                        confirmLabel={t(locale, "Delete", "מחיקה")}
+                        triggerLabel={t(locale, "Delete", "מחיקה")}
+                        danger
                         action={deleteNoteAction.bind(
                           null,
                           locale,
                           patient.id,
                           note.id
                         )}
-                      >
-                        <button
-                          type="submit"
-                          className="text-sm hover:underline"
-                        >
-                          {t(locale, "Delete", "מחיקה")}
-                        </button>
-                      </form>
+                      />
                     </div>
                   </div>
                   {note.keyTopics ? (

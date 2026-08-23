@@ -27,7 +27,7 @@ export default async function MessagesPage({
   const send = sendStaffMessageAction.bind(null, locale, activeId);
 
   return (
-    <div className="max-w-5xl grid gap-4 md:grid-cols-[16rem_1fr]">
+    <div className="w-full min-w-0 grid gap-4 md:grid-cols-[16rem_1fr]">
       <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
         <h1 className="text-lg font-semibold mb-3">
           {t(locale, "Messages", "הודעות")}

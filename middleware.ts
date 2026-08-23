@@ -9,6 +9,7 @@ const staffPrefixes = [
   "/messages",
   "/groups",
   "/resources",
+  "/questionnaires",
   "/settings",
   "/inquiries",
 ];

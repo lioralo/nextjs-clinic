@@ -2,6 +2,7 @@ import {
   deleteInquiryAction,
   markInquiryReadAction,
 } from "@/app/[locale]/(clinic)/inquiries/actions";
+import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { t } from "@/lib/copy";
 import { listContactInquiries } from "@/lib/contact-service";
 
@@ -14,7 +15,7 @@ export default async function InquiriesPage({
   const inquiries = await listContactInquiries();
 
   return (
-    <div className="max-w-3xl">
+    <div className="w-full min-w-0">
       <h1 className="text-2xl font-semibold mb-1">
         {t(locale, "Contact inquiries", "פניות מהאתר")}
       </h1>
@@ -37,7 +38,7 @@ export default async function InquiriesPage({
                   : ` · ${t(locale, "Unread", "לא נקראה")}`}
               </div>
               <p className="mt-2 whitespace-pre-wrap">{inquiry.message}</p>
-              <div className="mt-3 flex gap-2">
+              <div className="mt-3 flex flex-wrap gap-2">
                 {!inquiry.readAt ? (
                   <form action={markInquiryReadAction.bind(null, locale, inquiry.id)}>
                     <button
@@ -49,11 +50,14 @@ export default async function InquiriesPage({
                     </button>
                   </form>
                 ) : null}
-                <form action={deleteInquiryAction.bind(null, locale, inquiry.id)}>
-                  <button type="submit" className="text-sm hover:underline">
-                    {t(locale, "Delete", "מחיקה")}
-                  </button>
-                </form>
+                <ConfirmActionDialog
+                  locale={locale}
+                  title={t(locale, "Delete inquiry?", "למחוק פנייה?")}
+                  confirmLabel={t(locale, "Delete", "מחיקה")}
+                  triggerLabel={t(locale, "Delete", "מחיקה")}
+                  danger
+                  action={deleteInquiryAction.bind(null, locale, inquiry.id)}
+                />
               </div>
             </li>
           ))}

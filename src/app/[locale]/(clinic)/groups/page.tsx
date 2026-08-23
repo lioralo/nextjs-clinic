@@ -12,7 +12,7 @@ export default async function GroupsPage({
   const create = createGroupAction.bind(null, locale);
 
   return (
-    <div className="max-w-3xl">
+    <div className="w-full min-w-0">
       <h1 className="text-2xl font-semibold mb-1">
         {t(locale, "Groups", "קבוצות")}
       </h1>

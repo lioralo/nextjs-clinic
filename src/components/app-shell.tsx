@@ -194,7 +194,7 @@ export default function AppShell({
           <main
             id="main-content"
             tabIndex={-1}
-            className="flex-1 p-4 outline-none"
+            className="flex-1 w-full min-w-0 p-4 outline-none"
           >
             {children}
           </main>

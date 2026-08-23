@@ -26,7 +26,7 @@ export default async function GroupDetailPage({
   const later = new Date(now.getTime() + 60 * 60 * 1000);
 
   return (
-    <div className="max-w-3xl">
+    <div className="w-full min-w-0">
       <h1 className="text-2xl font-semibold mb-1">{group.name}</h1>
       {group.description ? (
         <p className="mb-4 text-[var(--color-foreground)]/70">{group.description}</p>

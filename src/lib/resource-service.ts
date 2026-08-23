@@ -3,18 +3,75 @@ import { sendMail } from "./mail";
 import { prisma } from "./prisma";
 import { revalidateClinic } from "./revalidate";
 
-export async function listResources() {
-  return prisma.resource.findMany({ orderBy: { createdAt: "desc" } });
+export async function listFolders() {
+  return prisma.resourceFolder.findMany({
+    orderBy: [{ name: "asc" }],
+    include: { _count: { select: { resources: true, children: true } } },
+  });
+}
+
+export async function listResources(folderId?: string | null) {
+  return prisma.resource.findMany({
+    where:
+      folderId === undefined
+        ? undefined
+        : folderId === null
+          ? { folderId: null }
+          : { folderId },
+    include: { folder: true },
+    orderBy: { createdAt: "desc" },
+  });
 }
 
 export async function getResource(id: string) {
-  return prisma.resource.findUnique({ where: { id } });
+  return prisma.resource.findUnique({
+    where: { id },
+    include: { folder: true },
+  });
+}
+
+export async function createFolder(input: {
+  name: string;
+  parentId?: string | null;
+}) {
+  const name = input.name.trim();
+  if (!name) return { ok: false as const, error: "invalid" };
+  const folder = await prisma.resourceFolder.create({
+    data: {
+      name,
+      parentId: input.parentId || null,
+    },
+  });
+  revalidateClinic();
+  return { ok: true as const, id: folder.id };
+}
+
+export async function renameFolder(id: string, name: string) {
+  const trimmed = name.trim();
+  if (!trimmed) return { ok: false as const, error: "invalid" };
+  await prisma.resourceFolder.update({
+    where: { id },
+    data: { name: trimmed },
+  });
+  revalidateClinic();
+  return { ok: true as const };
+}
+
+export async function deleteFolder(id: string) {
+  await prisma.resource.updateMany({
+    where: { folderId: id },
+    data: { folderId: null },
+  });
+  await prisma.resourceFolder.delete({ where: { id } });
+  revalidateClinic();
+  return { ok: true as const };
 }
 
 export async function createResource(input: {
   title: string;
   description?: string;
   url: string;
+  folderId?: string | null;
   isPublic?: boolean;
   allowPatientView?: boolean;
   allowPatientDownload?: boolean;
@@ -28,6 +85,7 @@ export async function createResource(input: {
       title,
       description: input.description?.trim() || null,
       url,
+      folderId: input.folderId || null,
       isPublic: Boolean(input.isPublic),
       allowPatientView: input.allowPatientView !== false,
       allowPatientDownload: input.allowPatientDownload !== false,
@@ -43,6 +101,7 @@ export async function updateResource(
     title: string;
     description?: string;
     url: string;
+    folderId?: string | null;
     isPublic?: boolean;
     allowPatientView?: boolean;
     allowPatientDownload?: boolean;
@@ -58,6 +117,7 @@ export async function updateResource(
       title,
       description: input.description?.trim() || null,
       url,
+      folderId: input.folderId === undefined ? undefined : input.folderId || null,
       isPublic: Boolean(input.isPublic),
       allowPatientView: input.allowPatientView !== false,
       allowPatientDownload: input.allowPatientDownload !== false,
@@ -75,9 +135,49 @@ export async function deleteResource(id: string) {
 export async function listPatientResources(patientId: string) {
   return prisma.patientResource.findMany({
     where: { patientId },
-    include: { resource: true },
+    include: { resource: { include: { folder: true } } },
     orderBy: { assignedAt: "desc" },
   });
+}
+
+async function folderPathMap() {
+  const folders = await prisma.resourceFolder.findMany();
+  const byId = new Map(folders.map((folder) => [folder.id, folder]));
+  function pathFor(id: string | null | undefined): string {
+    if (!id) return "";
+    const parts: string[] = [];
+    let current = byId.get(id);
+    const guard = new Set<string>();
+    while (current && !guard.has(current.id)) {
+      guard.add(current.id);
+      parts.unshift(current.name);
+      current = current.parentId ? byId.get(current.parentId) : undefined;
+    }
+    return parts.join(" / ");
+  }
+  return { folders, pathFor };
+}
+
+export async function listVisiblePortalResources(patientId: string) {
+  const assigned = await prisma.patientResource.findMany({
+    where: { patientId },
+    select: { resourceId: true },
+  });
+  const assignedIds = new Set(assigned.map((row) => row.resourceId));
+  const resources = await prisma.resource.findMany({
+    where: { allowPatientView: true },
+    include: { folder: true },
+    orderBy: { title: "asc" },
+  });
+  const { pathFor } = await folderPathMap();
+  return resources
+    .filter((resource) => resource.isPublic || assignedIds.has(resource.id))
+    .map((resource) => ({
+      id: resource.id,
+      title: resource.title,
+      allowPatientDownload: resource.allowPatientDownload,
+      folderPath: pathFor(resource.folderId),
+    }));
 }
 
 export async function assignResource(patientId: string, resourceId: string) {
