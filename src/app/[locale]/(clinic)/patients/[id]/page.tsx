@@ -3,12 +3,8 @@ import { notFound } from "next/navigation";
 
 import {
   addNoteAction,
-  assignResourceAction,
   deleteNoteAction,
-  grantPortalAction,
-  unassignResourceAction,
   updateNoteAction,
-  updatePatientAction,
 } from "@/app/[locale]/(clinic)/patients/actions";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { PatientCarePanel } from "@/components/patient-care-panel";
@@ -78,7 +74,6 @@ export default async function PatientDetailPage({
       };
     })
     .filter((item): item is NonNullable<typeof item> => Boolean(item));
-  const savePatient = updatePatientAction.bind(null, locale, patient.id);
   const saveNote = addNoteAction.bind(null, locale, patient.id);
   const editing = notes.find((note) => note.id === editNote);
 
@@ -169,12 +164,6 @@ export default async function PatientDetailPage({
             portalUser={portalUser}
             tempPassword={tempPassword}
             portalError={portalError}
-            savePatient={savePatient}
-            grantPortal={grantPortalAction.bind(null, locale, patient.id)}
-            assignResource={assignResourceAction.bind(null, locale, patient.id)}
-            unassignResource={(resourceId) =>
-              unassignResourceAction.bind(null, locale, patient.id, resourceId)
-            }
           />
           <section
             data-testid="patient-meetings"

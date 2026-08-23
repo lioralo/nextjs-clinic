@@ -2,6 +2,12 @@
 
 import { useState } from "react";
 
+import {
+  assignResourceAction,
+  grantPortalAction,
+  unassignResourceAction,
+  updatePatientAction,
+} from "@/app/[locale]/(clinic)/patients/actions";
 import { Dialog } from "@/components/ui/dialog";
 import {
   PATIENT_STATUSES,
@@ -38,10 +44,6 @@ export function PatientOpsDialogs({
   portalUser,
   tempPassword,
   portalError,
-  savePatient,
-  grantPortal,
-  assignResource,
-  unassignResource,
 }: {
   locale: AppLocale;
   patient: PatientFields;
@@ -50,12 +52,6 @@ export function PatientOpsDialogs({
   portalUser?: string | null;
   tempPassword?: string | null;
   portalError?: string | null;
-  savePatient: (formData: FormData) => void | Promise<void>;
-  grantPortal: (formData: FormData) => void | Promise<void>;
-  assignResource: (formData: FormData) => void | Promise<void>;
-  unassignResource: (
-    resourceId: string
-  ) => (formData: FormData) => void | Promise<void>;
 }) {
   const [editOpen, setEditOpen] = useState(false);
   const [portalOpen, setPortalOpen] = useState(Boolean(portalUser || portalError));
@@ -66,6 +62,10 @@ export function PatientOpsDialogs({
       : patient.birthDate
         ? toDateInputValue(new Date(patient.birthDate))
         : "";
+
+  const savePatient = updatePatientAction.bind(null, locale, patient.id);
+  const grantPortal = grantPortalAction.bind(null, locale, patient.id);
+  const assignResource = assignResourceAction.bind(null, locale, patient.id);
 
   return (
     <>
@@ -279,6 +279,7 @@ export function PatientOpsDialogs({
           </select>
           <button
             type="submit"
+            data-testid="assign-resource-submit"
             className="min-h-11 rounded-xl bg-[var(--color-primary)] px-4 py-2 font-semibold text-[var(--color-surface)]"
           >
             {t(locale, "Assign", "שיוך")}
@@ -299,7 +300,14 @@ export function PatientOpsDialogs({
                   className="flex items-center justify-between gap-2 rounded-xl border border-[var(--color-border)] px-3 py-2 text-sm"
                 >
                   <span>{resource.title}</span>
-                  <form action={unassignResource(resourceId)}>
+                  <form
+                    action={unassignResourceAction.bind(
+                      null,
+                      locale,
+                      patient.id,
+                      resourceId
+                    )}
+                  >
                     <button type="submit" className="hover:underline">
                       {t(locale, "Remove", "הסר")}
                     </button>

@@ -60,6 +60,9 @@ test("staff create resource, assign it, and patient can download", async ({
   await page.goto("/he/patients");
   await page.getByTestId("crm-status-ongoing").click();
   await page.getByRole("link", { name: "Test Patient" }).first().click();
+  await expect(page.getByTestId("patient-ops")).toBeVisible();
+  await page.getByTestId("open-assign-resource").click();
+  await expect(page.getByTestId("assign-resource-dialog")).toBeVisible();
   await page.getByTestId("assign-resource").selectOption({ label: title });
   await page.getByTestId("assign-resource-submit").click();
 
@@ -102,9 +105,13 @@ test("patient cancel request can be approved", async ({ page }) => {
   await setInputValue(page, page.getByTestId("draft-end"), localInput(end));
   await page.getByRole("checkbox", { name: /חוזר שבועית/ }).uncheck();
   await page.getByTestId("create-booking").click();
-  await expect(
-    page.locator(".fc-event").filter({ hasText: "Test Patient" }).first()
-  ).toBeVisible({ timeout: 10_000 });
+  const booked = page.locator(".fc-event").filter({ hasText: "Test Patient" }).first();
+  for (let i = 0; i < 3; i += 1) {
+    if (await booked.isVisible().catch(() => false)) break;
+    await page.locator(".fc-next-button").click();
+    await page.waitForTimeout(400);
+  }
+  await expect(booked).toBeVisible({ timeout: 10_000 });
 
   await logoutToLogin(page);
   await loginPortal(page);
@@ -120,10 +127,12 @@ test("patient cancel request can be approved", async ({ page }) => {
   await login(page);
   await page.goto("/he/cancel-requests");
   await expect(page.getByTestId("cancel-queue")).toContainText(reason);
+  const cancelItem = page.locator("li").filter({ hasText: reason });
+  await cancelItem.getByTestId("approve-cancel").click();
+  await expect(page.getByTestId("approve-cancel-dialog")).toBeVisible();
   await page
-    .locator("li")
-    .filter({ hasText: reason })
-    .getByTestId("approve-cancel")
+    .getByTestId("approve-cancel-dialog")
+    .getByRole("button", { name: /אשר|Approve/ })
     .click();
   await expect(page.getByText(reason)).toHaveCount(0);
 });
