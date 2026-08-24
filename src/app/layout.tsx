@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import { Heebo, JetBrains_Mono, Plus_Jakarta_Sans } from "next/font/google";
 
@@ -23,6 +23,14 @@ const jetBrainsMono = JetBrains_Mono({
   variable: "--font-jetbrains-mono",
   display: "swap",
 });
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#134e4a",
+  interactiveWidget: "resizes-content",
+};
 
 export const metadata: Metadata = {
   title: {

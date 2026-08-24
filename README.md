@@ -46,9 +46,10 @@ Override the admin account with `ADMIN_USERNAME` / `ADMIN_PASSWORD` before `npm 
 | [docs/README.md](docs/README.md) | Index of all documentation |
 | [docs/CHANGELOG.md](docs/CHANGELOG.md) | What landed on `main` and how to debug recent CI issues |
 | [docs/LOCAL-RUNNER.md](docs/LOCAL-RUNNER.md) | One-command local update and run |
+| [docs/TESTING.md](docs/TESTING.md) | Vitest, Playwright, CI, mobile, debug |
 | [docs/FEATURES.md](docs/FEATURES.md) | Staff, portal, and public product surfaces |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Routes, auth, data, i18n, calendar |
-| [docs/OPERATIONS.md](docs/OPERATIONS.md) | Env, SMTP, tests, troubleshooting |
+| [docs/OPERATIONS.md](docs/OPERATIONS.md) | Env, SMTP, ops troubleshooting |
 
 ## Scripts
 

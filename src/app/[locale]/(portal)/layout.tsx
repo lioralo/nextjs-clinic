@@ -32,7 +32,7 @@ export default async function PortalLayout({
       <SkipLink locale={locale} />
       <header
         role="banner"
-        className="flex items-center justify-between gap-3 px-4 py-3"
+        className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 pt-[max(0.5rem,env(safe-area-inset-top))]"
         style={{ borderBlockEnd: "1px solid var(--color-border)" }}
       >
         <div className="flex min-w-0 items-center gap-3">
@@ -52,7 +52,7 @@ export default async function PortalLayout({
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <LocaleToggle locale={locale} />
           <LogoutButton
             locale={locale}
@@ -60,7 +60,11 @@ export default async function PortalLayout({
           />
         </div>
       </header>
-      <main id="main-content" tabIndex={-1} className="flex-1 p-4 outline-none">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="flex-1 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] outline-none"
+      >
         {children}
       </main>
       <SiteFooter locale={locale} />
