@@ -5,10 +5,12 @@ dotenv.config();
 import { PrismaClient } from "@prisma/client";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 
+import { resolveDatabaseUrl } from "./database-url";
+
 // Prevent creating many PrismaClient instances in dev (Next.js hot reload).
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
-const databaseUrl = process.env.DATABASE_URL || "file:./dev.db";
+const databaseUrl = resolveDatabaseUrl();
 
 const adapter = new PrismaLibSql({
   url: databaseUrl,

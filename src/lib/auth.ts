@@ -6,6 +6,7 @@ import { prisma } from "./prisma";
 import { verifyUserSecondFactor } from "./totp-service";
 
 export const authOptions: NextAuthOptions = {
+  secret: process.env.NEXTAUTH_SECRET,
   session: {
     strategy: "jwt",
   },
@@ -18,7 +19,7 @@ export const authOptions: NextAuthOptions = {
         otp: { label: "OTP", type: "text" },
       },
       async authorize(credentials) {
-        const username = credentials?.username;
+        const username = credentials?.username?.trim();
         const password = credentials?.password;
         if (!username || !password) return null;
 

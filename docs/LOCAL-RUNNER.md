@@ -63,7 +63,7 @@ flowchart TD
 2. **Git** — Fast-forward `origin/<current-branch>` only. Skipped when the working tree is dirty, HEAD is detached, fetch fails, or `--no-pull` is set.
 3. **npm** — `npm install` at the repo root.
 4. **Database** — `npx prisma generate` then `npx prisma migrate deploy` (same non-interactive path as GitHub Actions). This **applies** migrations from `prisma/migrations/`; it does not create new ones.
-5. **Seed** — Idempotent: creates `admin` if missing, upserts **Test Patient**, creates portal user `portal` if missing, ensures PHQ-9 / GAD-7 types.
+5. **Seed** — Idempotent: creates or **resets** `admin` (password from `ADMIN_PASSWORD`, 2FA off), upserts **Test Patient**, creates or resets portal user `portal` / `portal-password`, ensures PHQ-9 / GAD-7 types.
 
 `up` then prints the login URLs and `exec`s `npm run dev -- --port $PORT`.
 
@@ -104,11 +104,10 @@ If you have uncommitted files, the runner **will not pull**. Commit or stash, or
 | `warning: Working tree is dirty; skip git pull` | Uncommitted files | Stash/commit, or `--no-pull` after a manual pull |
 | `git pull --ff-only failed` | Local branch diverged | `git status`; rebase or reset to origin only if you intend to drop local commits |
 | `Port 3000 is already in use` | Leftover `next dev` | Stop it, or `npm run local -- --kill-port` |
-| Login page loads, session bounce | `.env.local` `NEXTAUTH_SECRET` / `NEXTAUTH_URL` | Recreate from `.env.example` only if you have no custom secrets |
-| Empty CRM / missing admin | Seed skipped or different `DATABASE_URL` | `npm run local:update` without `--no-seed`; confirm `file:./dev.db` |
+| Login page loads, session bounce | `.env.local` `NEXTAUTH_SECRET` / `NEXTAUTH_URL` | Recreate from `.env.example` only if you have no custom secrets; use http://localhost:3000 |
+| Empty CRM / missing admin / cannot log in | Seed skipped or different `DATABASE_URL` | `npm run db:seed` then restart; seed resets `admin` / `admin-password` |
 | Prisma client missing after pull | Generate did not run | `npm run local:update` |
 | `migrate deploy` errors on SQLite | DB from an older tree | Keep `dev.db` or delete it (loses local data) and re-run `local:update` |
-| Seed does not change the admin password | User already exists | Seed only **creates** admin; change password in the DB or delete that user |
 | Windows `bash: command not found` | No Git Bash | Install Git for Windows and run from Git Bash, or WSL |
 
 CI (`.github/workflows/test.yml`) does not call the runner; it repeats the same migrate deploy + seed + test + e2e steps so GitHub stays non-interactive.

@@ -9,7 +9,7 @@ Copy [`.env.example`](../.env.example) to `.env.local`.
 | `DATABASE_URL` | yes | SQLite URL, default `file:./dev.db` |
 | `NEXTAUTH_URL` | yes | Origin, e.g. `http://localhost:3000` |
 | `NEXTAUTH_SECRET` | yes | JWT signing secret |
-| `ADMIN_USERNAME` | seed | Created on first `npm run db:seed` if missing |
+| `ADMIN_USERNAME` | seed | Staff login; default `admin`. Seed creates or **resets** this account |
 | `ADMIN_PASSWORD` | seed | Same; default `admin-password` |
 | `SMTP_HOST` | no | If empty, mail is skipped (logged) |
 | `SMTP_PORT` | no | Default `587` |
@@ -90,7 +90,8 @@ Useful test ids: `login-form`, `clinic-sidebar`, `logout`, `clinic-logo`, `clini
 
 | Symptom | Likely cause | What to check |
 |---------|--------------|----------------|
-| Login UI succeeds, then bounce to login | Session cookie not set / secret mismatch | `.env.local` `NEXTAUTH_SECRET` and `NEXTAUTH_URL`; retry; watch Network for `/api/auth/callback/credentials` |
+| Login UI succeeds, then bounce to login | Session cookie not set / secret mismatch | `.env.local` `NEXTAUTH_SECRET` and `NEXTAUTH_URL=http://localhost:3000`; open **localhost** not `127.0.0.1`; restart `next dev` after changing env |
+| Username or password is incorrect for admin | No seed, old hash, or different DB file | Stop the server, `npm run db:seed`, start again. Seed now **resets** `admin` / `admin-password` |
 | Staff URL shows portal or vice versa | Role on JWT | `User.role`; middleware in `middleware.ts` |
 | Calendar empty / mutations 401 | Not logged in as staff; CSRF | `e2e/auth.ts` cookie poll; POST `/api/calendar` |
 | Duplicate FullCalendar keys | Recurring ids | Events must use `${id}__${iso}` from `toCalendarEvent` |
