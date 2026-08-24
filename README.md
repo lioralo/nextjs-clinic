@@ -14,10 +14,18 @@ npm run local
 
 Flags: `npm run local -- --no-pull` (skip git), `--no-seed`, `--kill-port` (free 3000).
 
-First clone, same thing after `git clone` + `cd nextjs-clinic`. If npm scripts are not available yet:
+First clone, same thing after `git clone` + `cd nextjs-clinic`. If npm says `Missing script: "local"`, you are not on latest `main` yet:
 
 ```bash
-bash scripts/local-run.sh
+git checkout main
+git pull origin main
+npm run local
+```
+
+Before `npm install`, you can also run:
+
+```bash
+node scripts/local-run.mjs
 ```
 
 Manual steps (equivalent):

@@ -47,7 +47,9 @@ npm run local:check        # unit tests + production build
 npm run local:e2e          # update + Playwright
 ```
 
-Implementation: [`scripts/local-run.sh`](../scripts/local-run.sh). Full command/flag/debug notes: [LOCAL-RUNNER.md](LOCAL-RUNNER.md). It copies `.env.example` → `.env.local` when missing, skips `git pull` if the tree is dirty, and applies migrations with `prisma migrate deploy` (non-interactive, same as CI). Use `npm run db:migrate` only when **creating** a new migration.
+Implementation: [`scripts/local-run.mjs`](../scripts/local-run.mjs) (Windows `cmd` / PowerShell / macOS / Linux). Full command/flag/debug notes: [LOCAL-RUNNER.md](LOCAL-RUNNER.md). It copies `.env.example` → `.env.local` when missing, skips `git pull` if the tree is dirty, and applies migrations with `prisma migrate deploy` (non-interactive, same as CI). Use `npm run db:migrate` only when **creating** a new migration.
+
+If npm says `Missing script: "local"`, run `git checkout main` then `git pull origin main`.
 
 ```bash
 npm run local -- --no-pull --kill-port
@@ -94,6 +96,7 @@ If e2e hangs on login: confirm seed + `NEXTAUTH_SECRET`, then see [TESTING.md](T
 | Contact form “works” but staff list empty | Different DB file | Same `DATABASE_URL` for seed, dev, and e2e |
 | TOTP rejected | Clock / recovery | 6 digits, 30s window; recovery codes are one-time hashes |
 | `prisma` client missing | Generate not run | `npx prisma generate` after schema pull |
+| `Missing script: "local"` | Checkout behind `main` | `git checkout main` then `git pull origin main`; `npm run` should list `local` |
 | Port 3000 in use | Leftover `next dev` | `npm run local -- --kill-port` or stop the other process |
 | Patient file white-screen / RSC error about functions | Plain function prop into a Client Component | Import server actions in `patient-ops-dialogs.tsx`; never pass `(id) => action.bind(...)` from a server page |
 | Playwright cannot switch PHQ-9 / GAD-7 | Controlled `<select value>` | Uncontrolled `defaultValue` + `onChange`; assert `input[name="q_8"]` exists before filling nine radios |
