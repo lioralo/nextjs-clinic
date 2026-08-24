@@ -101,6 +101,11 @@ Useful test ids: `login-form`, `clinic-sidebar`, `logout`, `clinic-logo`, `clini
 | TOTP rejected | Clock / recovery | 6 digits, 30s window; recovery codes are one-time hashes |
 | `prisma` client missing | Generate not run | `npx prisma generate` after schema pull |
 | Port 3000 in use | Leftover `next dev` | `npm run local -- --kill-port` or stop the other process |
+| Patient file white-screen / RSC error about functions | Plain function prop into a Client Component | Import server actions in `patient-ops-dialogs.tsx`; never pass `(id) => action.bind(...)` from a server page |
+| Playwright cannot switch PHQ-9 / GAD-7 | Controlled `<select value>` | Uncontrolled `defaultValue` + `onChange`; assert `input[name="q_8"]` exists before filling nine radios |
+| Assign resource / approve cancel e2e timeout | Controls live in a dialog | Click `open-assign-resource` or `approve-cancel`, then the control inside the dialog |
+| Calendar event not visible after create | Slot is next week in the grid | Click `.fc-next-button` a few times (same as group-session e2e) |
+| Seed does not change admin password | User already exists | Seed only **creates** admin; delete the user or wait for PR #11 |
 
 Server logs: Next dev terminal. Prisma warns in development. Mail errors print `[mail error]`.
 

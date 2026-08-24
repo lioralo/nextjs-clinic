@@ -83,10 +83,11 @@ Business rules stay in `src/lib`, not in Flask-style templates.
 | `portal-service.ts` | Grant/reset portal user, temp password |
 | `messaging-service.ts` | Direct messages and notifications |
 | `group-service.ts` | Groups, sessions, attendance |
-| `resource-service.ts` | Library + per-patient assignment |
+| `resource-service.ts` | Folder tree, library URLs, per-patient assignment, portal ACL |
 | `treatment-plan-service.ts` | Plans, goals, share-with-patient |
-| `assessment-service.ts` | PHQ-9 / GAD-7 persist + score |
-| `assessment-catalog.ts` | Question text and severity bands |
+| `assessment-service.ts` | Persist takes; upsert catalog into `AssessmentType.definitionJson` |
+| `questionnaire-definition.ts` | JSON definition parse, score, CSV/TSV import |
+| `assessment-catalog.ts` | Built-in PHQ-9 / GAD-7 text and severity bands |
 | `contact-service.ts` | Public inquiries |
 | `totp.ts` / `totp-service.ts` | Secrets, URI, verify, recovery hashes |
 | `public-booking-service.ts` | Active booking tokens |
@@ -94,7 +95,7 @@ Business rules stay in `src/lib`, not in Flask-style templates.
 | `datetime.ts` | Clinic hours, `formatDateTime` (`he-IL` / `en-GB`, 24h) |
 | `brand.ts` / `clinic-nav.ts` | Display name and staff nav |
 
-`revalidateClinic()` busts dashboard/patient/calendar paths after mutations.
+`revalidateClinic()` in [`revalidate.ts`](../src/lib/revalidate.ts) busts dashboard/patient/calendar paths after mutations.
 
 ## Auth sequence
 
@@ -127,9 +128,11 @@ See [`prisma/schema.prisma`](../prisma/schema.prisma). Migrations under `prisma/
 
 **Identity:** `User` (credentials, TOTP fields, optional `patientId`).
 
-**Clinical:** `Patient`, `Appointment` (kind `APPOINTMENT` \| `VACANCY` \| `BLOCK`, optional weekly recurrence), `RecurrenceException`, `Note`, `TreatmentPlan` / `TreatmentPlanGoal`, `AssessmentType` / `Assessment`.
+**Clinical:** `Patient`, `Appointment` (kind `APPOINTMENT` \| `VACANCY` \| `BLOCK`, optional weekly recurrence), `RecurrenceException`, `Note`, `TreatmentPlan` / `TreatmentPlanGoal`, `AssessmentType` (`definitionJson`) / `Assessment` (`questionsJson` snapshot).
 
-**Ops:** `CancelRequest`, `Message`, `Notification`, `TherapyGroup` + members/sessions/attendance, `Resource` / `PatientResource`, `PublicBookingLink`, `ContactInquiry`.
+**Ops:** `CancelRequest`, `Message`, `Notification`, `TherapyGroup` + members/sessions/attendance, `ResourceFolder` + `Resource` / `PatientResource`, `PublicBookingLink`, `ContactInquiry`.
+
+**UI dialogs:** Client [`Dialog`](../src/components/ui/dialog.tsx). Server Actions used as `<form action={...}>` must be imported in the client file (or `.bind` of a `"use server"` export). Do **not** pass a JS wrapper function from a Server Component — Next will throw `Functions cannot be passed directly to Client Components`.
 
 Recurring appointments store the series on one `Appointment` row (`isRecurring`, `recurrenceIntervalWeeks`, `recurrenceEndDate`). Listing expands occurrences in range; exceptions SKIP or MOVE a single start.
 

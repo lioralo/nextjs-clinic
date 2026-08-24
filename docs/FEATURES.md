@@ -25,10 +25,12 @@ Hebrew is the default. Every locale URL is `/{he|en}/...`.
 | `/{locale}/inquiries` | פניות | Public contact form submissions (mark read / delete) |
 | `/{locale}/settings` | הגדרות | Staff TOTP setup |
 
+Clinic pages (except settings) are **full-bleed** in the main column. Short staff actions use a modal (`Dialog`) rather than a long inline form.
+
 ### Patient file
 
-- **Overview** — name, phone, email, status (`ONGOING`, `CANDIDATE`, `WAITING`, `ARCHIVED`), type (`PRIVATE`, `RESIDENCY`, `GROUP`, `INITIAL_INTAKE`), grant portal access (temp password, `forcePasswordChange`).
-- **Logs (`?section=logs`)** — session notes; optional share-with-patient.
+- **Overview** — name, phone, email, status (`ONGOING`, `CANDIDATE`, `WAITING`, `ARCHIVED`), type (`PRIVATE`, `RESIDENCY`, `GROUP`, `INITIAL_INTAKE`). Buttons open dialogs for edit, portal grant (temp password, `forcePasswordChange`), and resource assign.
+- **Logs (`?section=logs`)** — session notes; optional share-with-patient; delete confirms in a dialog.
 - **Care (`?section=care`)** — treatment plans + goals (progress 0–100, share-with-patient); take active questionnaires (seeded PHQ-9/GAD-7 plus staff-managed types).
 
 ### Questionnaires

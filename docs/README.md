@@ -4,6 +4,7 @@ This folder describes the Next.js clinic app as it exists in this repository (no
 
 | Document | Audience | What it covers |
 |----------|----------|----------------|
+| [CHANGELOG.md](CHANGELOG.md) | Everyone | What landed, this drop, open PRs, debug notes |
 | [LOCAL-RUNNER.md](LOCAL-RUNNER.md) | Developers | `npm run local`: pull, migrate, seed, start, debug |
 | [FEATURES.md](FEATURES.md) | Product / clinic staff | Screens, roles, and user flows |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Developers | Layouts, services, auth, data model, i18n |
