@@ -2,12 +2,11 @@
 
 import { redirect } from "next/navigation";
 
-import { normalizeLocale } from "@/lib/locale";
 import {
   broadcastNotification,
   sendMessage,
 } from "@/lib/messaging-service";
-import { getSessionUser } from "@/lib/session";
+import { requireStaffUser } from "@/lib/session";
 import { revalidateClinic } from "@/lib/revalidate";
 
 export async function sendStaffMessageAction(
@@ -15,9 +14,7 @@ export async function sendStaffMessageAction(
   recipientId: string,
   formData: FormData
 ) {
-  const loc = normalizeLocale(locale) ?? "he";
-  const user = await getSessionUser();
-  if (!user || user.role === "PATIENT") redirect(`/${loc}/login`);
+  const { loc, user } = await requireStaffUser(locale);
   await sendMessage({
     senderId: user.id,
     recipientId,
@@ -31,9 +28,7 @@ export async function broadcastNotificationAction(
   locale: string,
   formData: FormData
 ) {
-  const loc = normalizeLocale(locale) ?? "he";
-  const user = await getSessionUser();
-  if (!user || user.role === "PATIENT") redirect(`/${loc}/login`);
+  const { loc } = await requireStaffUser(locale);
   await broadcastNotification({
     title: String(formData.get("title") ?? "").trim() || "Clinic",
     body: String(formData.get("body") ?? ""),

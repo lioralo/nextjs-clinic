@@ -124,6 +124,7 @@ export function ClinicCalendar({
     "IN_PERSON"
   );
   const [editMeetingLink, setEditMeetingLink] = useState("");
+  const [editSyncKey, setEditSyncKey] = useState("");
   const [occupyPatientId, setOccupyPatientId] = useState(
     focusPatientId && patients.some((patient) => patient.id === focusPatientId)
       ? focusPatientId
@@ -177,13 +178,26 @@ export function ClinicCalendar({
     return () => window.removeEventListener("keydown", onKey);
   }, [formError, locale, router]);
 
-  useEffect(() => {
-    if (!selected) return;
+  const selectedSyncKey = selected
+    ? [
+        selected.id,
+        selected.start,
+        selected.end,
+        selected.meetingType,
+        selected.meetingLink ?? "",
+      ].join("|")
+    : "";
+  if (selected && selectedSyncKey !== editSyncKey) {
+    setEditSyncKey(selectedSyncKey);
     setEditStart(toDatetimeLocalValue(new Date(selected.start)));
     setEditEnd(toDatetimeLocalValue(new Date(selected.end)));
-    setEditMeetingType(selected.meetingType === "ONLINE" ? "ONLINE" : "IN_PERSON");
+    setEditMeetingType(
+      selected.meetingType === "ONLINE" ? "ONLINE" : "IN_PERSON"
+    );
     setEditMeetingLink(selected.meetingLink ?? "");
-  }, [selected]);
+  } else if (!selected && editSyncKey) {
+    setEditSyncKey("");
+  }
 
   const events = useMemo(
     () =>

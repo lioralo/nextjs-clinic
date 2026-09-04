@@ -2,7 +2,6 @@
 
 import { redirect } from "next/navigation";
 
-import { normalizeLocale } from "@/lib/locale";
 import {
   createFolder,
   createResource,
@@ -12,21 +11,14 @@ import {
   updateResource,
 } from "@/lib/resource-service";
 import { revalidateClinic } from "@/lib/revalidate";
-import { getSessionUser } from "@/lib/session";
-
-async function requireStaff(locale: string) {
-  const loc = normalizeLocale(locale) ?? "he";
-  const user = await getSessionUser();
-  if (!user || user.role === "PATIENT") redirect(`/${loc}/login`);
-  return loc;
-}
+import { requireStaffUser } from "@/lib/session";
 
 function folderQuery(folderId: string | null | undefined) {
   return folderId ? `?folder=${folderId}` : "";
 }
 
 export async function createFolderAction(locale: string, formData: FormData) {
-  const loc = await requireStaff(locale);
+  const { loc } = await requireStaffUser(locale);
   const parentId = String(formData.get("parentId") ?? "") || null;
   await createFolder({
     name: String(formData.get("name") ?? ""),
@@ -41,21 +33,21 @@ export async function renameFolderAction(
   folderId: string,
   formData: FormData
 ) {
-  const loc = await requireStaff(locale);
+  const { loc } = await requireStaffUser(locale);
   await renameFolder(folderId, String(formData.get("name") ?? ""));
   revalidateClinic();
   redirect(`/${loc}/resources?folder=${folderId}`);
 }
 
 export async function deleteFolderAction(locale: string, folderId: string) {
-  const loc = await requireStaff(locale);
+  const { loc } = await requireStaffUser(locale);
   await deleteFolder(folderId);
   revalidateClinic();
   redirect(`/${loc}/resources`);
 }
 
 export async function createResourceAction(locale: string, formData: FormData) {
-  const loc = await requireStaff(locale);
+  const { loc } = await requireStaffUser(locale);
   const folderId = String(formData.get("folderId") ?? "") || null;
   await createResource({
     title: String(formData.get("title") ?? ""),
@@ -77,7 +69,7 @@ export async function updateResourceAction(
   resourceId: string,
   formData: FormData
 ) {
-  const loc = await requireStaff(locale);
+  const { loc } = await requireStaffUser(locale);
   const folderId = String(formData.get("folderId") ?? "") || null;
   await updateResource(resourceId, {
     title: String(formData.get("title") ?? ""),
@@ -95,7 +87,7 @@ export async function updateResourceAction(
 }
 
 export async function deleteResourceAction(locale: string, resourceId: string) {
-  const loc = await requireStaff(locale);
+  const { loc } = await requireStaffUser(locale);
   await deleteResource(resourceId);
   revalidateClinic();
   redirect(`/${loc}/resources`);

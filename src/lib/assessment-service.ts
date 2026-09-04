@@ -12,31 +12,45 @@ import {
 } from "./questionnaire-definition";
 import { revalidateClinic } from "./revalidate";
 
+/**
+ * Seed built-in PHQ-9 / GAD-7 rows if missing.
+ * Never overwrite definitionJson / scores for existing rows — staff may customize them.
+ */
 export async function ensureAssessmentTypes() {
   for (const item of ASSESSMENT_CATALOG) {
-    const definitionJson = JSON.stringify(definitionFromCatalog(item));
-    await prisma.assessmentType.upsert({
+    const existing = await prisma.assessmentType.findUnique({
       where: { key: item.key },
-      update: {
-        name: item.name,
-        description: item.descriptionEn,
-        descriptionHe: item.descriptionHe,
-        minScore: item.minScore,
-        maxScore: item.maxScore,
-        isActive: true,
-        definitionJson,
-      },
-      create: {
+      select: { id: true },
+    });
+    if (existing) continue;
+
+    await prisma.assessmentType.create({
+      data: {
         key: item.key,
         name: item.name,
         description: item.descriptionEn,
         descriptionHe: item.descriptionHe,
         minScore: item.minScore,
         maxScore: item.maxScore,
-        definitionJson,
+        definitionJson: JSON.stringify(definitionFromCatalog(item)),
+        isActive: true,
       },
     });
   }
+}
+
+/** Collect q_0..q_N answers using the stored (or catalog) question count for typeKey. */
+export async function readAssessmentAnswersFromForm(
+  formData: FormData,
+  typeKey: string
+): Promise<number[]> {
+  const type = await getAssessmentType(typeKey);
+  const definition = type ? resolveDefinition(type) : null;
+  const count =
+    definition?.questions.length ?? getCatalog(typeKey)?.questions.length ?? 0;
+  return Array.from({ length: count }, (_, index) =>
+    Number(formData.get(`q_${index}`))
+  );
 }
 
 export async function listAssessmentTypes(includeInactive = false) {
@@ -45,7 +59,7 @@ export async function listAssessmentTypes(includeInactive = false) {
     where: includeInactive ? undefined : { isActive: true },
     orderBy: { name: "asc" },
   });
-  const catalogOrder = new Map(
+  const catalogOrder = new Map<string, number>(
     ASSESSMENT_CATALOG.map((item, index) => [item.key, index])
   );
   return rows.sort(

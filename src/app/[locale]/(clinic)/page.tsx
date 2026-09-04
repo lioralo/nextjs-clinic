@@ -33,9 +33,11 @@ export default async function DashboardPage({
       row.startAt >= start &&
       row.startAt < end
   );
-  const upcoming = range
-    .filter((row) => row.kind === "APPOINTMENT" && row.startAt >= new Date())
-    .slice(0, 5);
+  const upcomingAll = range.filter(
+    (row) => row.kind === "APPOINTMENT" && row.startAt >= new Date()
+  );
+  const upcomingCount = upcomingAll.length;
+  const upcoming = upcomingAll.slice(0, 5);
 
   return (
     <div className="w-full min-w-0">
@@ -54,7 +56,9 @@ export default async function DashboardPage({
           <div className="text-sm text-[var(--color-foreground)]/70">
             {t(locale, "Upcoming appointments", "פגישות קרובות")}
           </div>
-          <div className="text-3xl font-semibold">{upcoming.length}</div>
+          <div className="text-3xl font-semibold" data-testid="upcoming-count">
+            {upcomingCount}
+          </div>
         </div>
         <div className="rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] p-5">
           <div className="text-sm text-[var(--color-foreground)]/70">

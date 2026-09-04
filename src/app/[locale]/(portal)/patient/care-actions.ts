@@ -2,8 +2,10 @@
 
 import { redirect } from "next/navigation";
 
-import { takeAssessment } from "@/lib/assessment-service";
-import { getCatalog } from "@/lib/assessment-catalog";
+import {
+  readAssessmentAnswersFromForm,
+  takeAssessment,
+} from "@/lib/assessment-service";
 import { normalizeLocale } from "@/lib/locale";
 import { getPortalPatient } from "@/lib/portal-service";
 import { getSessionUser } from "@/lib/session";
@@ -18,10 +20,7 @@ export async function takePortalAssessmentAction(
   const portal = await getPortalPatient(user.id);
   if (!portal) redirect(`/${loc}/login`);
   const typeKey = String(formData.get("typeKey") ?? "");
-  const catalog = getCatalog(typeKey);
-  const answers = (catalog?.questions ?? []).map((_, index) =>
-    Number(formData.get(`q_${index}`))
-  );
+  const answers = await readAssessmentAnswersFromForm(formData, typeKey);
   await takeAssessment({
     patientId: portal.patient.id,
     typeKey,

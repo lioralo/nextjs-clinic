@@ -53,13 +53,15 @@ export default function AppShell({
 }) {
   const pathname = usePathname() || `/${locale}`;
   const [menuOpen, setMenuOpen] = useState(false);
+  const [menuPathname, setMenuPathname] = useState(pathname);
   const navId = useId();
   const groups = clinicNav(locale);
   const title = pageTitleFromPath(locale, pathname);
 
-  useEffect(() => {
+  if (pathname !== menuPathname) {
+    setMenuPathname(pathname);
     setMenuOpen(false);
-  }, [pathname]);
+  }
 
   useEffect(() => {
     document.documentElement.classList.toggle("nav-open", menuOpen);

@@ -71,7 +71,8 @@ export default async function PatientHomePage({
       };
     })
     .filter((item): item is NonNullable<typeof item> => Boolean(item));
-  const upcoming = meetings.filter((row) => row.startAt.getTime() >= Date.now());
+  const now = new Date();
+  const upcoming = meetings.filter((row) => row.startAt.getTime() >= now.getTime());
   const send = sendPatientMessageAction.bind(null, locale);
   const markRead = markPortalNotificationsReadAction.bind(null, locale);
 

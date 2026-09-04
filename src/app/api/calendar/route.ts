@@ -4,7 +4,10 @@ import {
   applyCalendarIntent,
   calendarPath,
 } from "@/lib/calendar-mutations";
-import { getSessionUserFromRequest } from "@/lib/session";
+import {
+  getSessionUserFromRequest,
+  isStaffRole,
+} from "@/lib/session";
 
 export async function GET() {
   return new NextResponse(null, { status: 204 });
@@ -17,7 +20,7 @@ export async function POST(req: NextRequest) {
 
   const user = await getSessionUserFromRequest(req);
 
-  if (!user) {
+  if (!user || !isStaffRole(user.role)) {
     if (ajax) {
       return NextResponse.json({ ok: false, error: "unauthorized" });
     }

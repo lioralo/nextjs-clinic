@@ -1,3 +1,5 @@
+"use server";
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -7,6 +9,7 @@ import {
   updateQuestionnaire,
 } from "@/lib/assessment-service";
 import { parseQuestionnaireCsv } from "@/lib/questionnaire-definition";
+import { requireStaffUser } from "@/lib/session";
 
 function revalidate(locale: string) {
   revalidatePath(`/${locale}/questionnaires`);
@@ -17,6 +20,7 @@ export async function importQuestionnaireAction(
   locale: "en" | "he",
   formData: FormData
 ) {
+  await requireStaffUser(locale);
   const name = String(formData.get("name") ?? "").trim();
   const key = String(formData.get("key") ?? "").trim();
   const csv = String(formData.get("csv") ?? "");
@@ -41,6 +45,7 @@ export async function saveQuestionnaireAction(
   key: string,
   formData: FormData
 ) {
+  await requireStaffUser(locale);
   const csv = String(formData.get("csv") ?? "").trim();
   if (csv) {
     const parsed = parseQuestionnaireCsv(csv);
@@ -88,6 +93,7 @@ export async function toggleQuestionnaireAction(
   key: string,
   formData: FormData
 ) {
+  await requireStaffUser(locale);
   const active = formData.get("isActive") === "1";
   await setQuestionnaireActive(key, active);
   revalidate(locale);

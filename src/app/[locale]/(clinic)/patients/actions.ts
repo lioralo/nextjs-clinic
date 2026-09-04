@@ -4,7 +4,6 @@ import type { PatientStatus, PatientType } from "@prisma/client";
 import { redirect } from "next/navigation";
 
 import { parseDateInput } from "@/lib/datetime";
-import { normalizeLocale } from "@/lib/locale";
 import {
   addNote,
   createPatient,
@@ -13,7 +12,7 @@ import {
   updatePatient,
 } from "@/lib/patient-service";
 import { revalidateClinic } from "@/lib/revalidate";
-import { getSessionUser } from "@/lib/session";
+import { requireStaffUser } from "@/lib/session";
 
 function emptyToNull(value: string): string | null {
   const trimmed = value.trim();
@@ -55,7 +54,7 @@ export async function createPatientAction(
   locale: string,
   formData: FormData
 ) {
-  const loc = normalizeLocale(locale) ?? "he";
+  const { loc } = await requireStaffUser(locale);
   const firstName = String(formData.get("firstName") ?? "").trim();
   const lastName = String(formData.get("lastName") ?? "").trim();
   const phone = emptyToNull(String(formData.get("phone") ?? ""));
@@ -91,7 +90,7 @@ export async function updatePatientAction(
   patientId: string,
   formData: FormData
 ) {
-  const loc = normalizeLocale(locale) ?? "he";
+  const { loc } = await requireStaffUser(locale);
   const firstName = String(formData.get("firstName") ?? "").trim();
   const lastName = String(formData.get("lastName") ?? "").trim();
   const phone = emptyToNull(String(formData.get("phone") ?? ""));
@@ -130,7 +129,7 @@ export async function addNoteAction(
   patientId: string,
   formData: FormData
 ) {
-  const loc = normalizeLocale(locale) ?? "he";
+  const { loc, user } = await requireStaffUser(locale);
   const content = String(formData.get("content") ?? "").trim();
   const keyTopics = emptyToNull(String(formData.get("keyTopics") ?? ""));
   const sessionNumber = parseOptionalInt(
@@ -138,10 +137,6 @@ export async function addNoteAction(
   );
   const noteDate = parseDateInput(String(formData.get("noteDate") ?? ""));
   const shareWithPatient = String(formData.get("shareWithPatient") ?? "") === "1";
-  const user = await getSessionUser();
-  if (!user) {
-    redirect(`/${loc}/login`);
-  }
 
   if (!patientId || !content) {
     redirect(`/${loc}/patients/${patientId}`);
@@ -166,7 +161,7 @@ export async function updateNoteAction(
   noteId: string,
   formData: FormData
 ) {
-  const loc = normalizeLocale(locale) ?? "he";
+  const { loc } = await requireStaffUser(locale);
   const content = String(formData.get("content") ?? "").trim();
   const keyTopics = emptyToNull(String(formData.get("keyTopics") ?? ""));
   const sessionNumber = parseOptionalInt(
@@ -174,10 +169,6 @@ export async function updateNoteAction(
   );
   const noteDate = parseDateInput(String(formData.get("noteDate") ?? ""));
   const shareWithPatient = String(formData.get("shareWithPatient") ?? "") === "1";
-  const user = await getSessionUser();
-  if (!user) {
-    redirect(`/${loc}/login`);
-  }
   if (!noteId || !content) {
     redirect(`/${loc}/patients/${patientId}`);
   }
@@ -197,11 +188,7 @@ export async function deleteNoteAction(
   patientId: string,
   noteId: string
 ) {
-  const loc = normalizeLocale(locale) ?? "he";
-  const user = await getSessionUser();
-  if (!user) {
-    redirect(`/${loc}/login`);
-  }
+  const { loc } = await requireStaffUser(locale);
   if (!noteId) {
     redirect(`/${loc}/patients/${patientId}`);
   }
@@ -214,9 +201,7 @@ export async function grantPortalAction(
   patientId: string,
   formData: FormData
 ) {
-  const loc = normalizeLocale(locale) ?? "he";
-  const user = await getSessionUser();
-  if (!user || user.role === "PATIENT") redirect(`/${loc}/login`);
+  const { loc } = await requireStaffUser(locale);
   const { grantPortalAccess } = await import("@/lib/portal-service");
   const result = await grantPortalAccess({
     patientId,
@@ -238,9 +223,7 @@ export async function assignResourceAction(
   patientId: string,
   formData: FormData
 ) {
-  const loc = normalizeLocale(locale) ?? "he";
-  const user = await getSessionUser();
-  if (!user || user.role === "PATIENT") redirect(`/${loc}/login`);
+  const { loc } = await requireStaffUser(locale);
   const { assignResource } = await import("@/lib/resource-service");
   await assignResource(patientId, String(formData.get("resourceId") ?? ""));
   redirect(`/${loc}/patients/${patientId}`);
@@ -251,9 +234,7 @@ export async function unassignResourceAction(
   patientId: string,
   resourceId: string
 ) {
-  const loc = normalizeLocale(locale) ?? "he";
-  const user = await getSessionUser();
-  if (!user || user.role === "PATIENT") redirect(`/${loc}/login`);
+  const { loc } = await requireStaffUser(locale);
   const { unassignResource } = await import("@/lib/resource-service");
   await unassignResource(patientId, resourceId);
   redirect(`/${loc}/patients/${patientId}`);
