@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 
 import AppShell from "@/components/app-shell";
 import { normalizeLocale } from "@/lib/locale";
-import { getSessionUser } from "@/lib/session";
+import { getSessionUser, isStaffRole } from "@/lib/session";
 
 export default async function ClinicLayout({
   children,
@@ -20,6 +20,9 @@ export default async function ClinicLayout({
   }
   if (user.role === "PATIENT") {
     redirect(`/${locale}/patient`);
+  }
+  if (!isStaffRole(user.role)) {
+    redirect(`/${locale}/login`);
   }
   return <AppShell locale={locale}>{children}</AppShell>;
 }

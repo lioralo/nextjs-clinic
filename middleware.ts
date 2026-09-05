@@ -17,6 +17,7 @@ const staffPrefixes = [
 function nextWithLocale(req: NextRequest, locale: string) {
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set("x-locale", locale);
+  requestHeaders.set("x-pathname", req.nextUrl.pathname);
   return NextResponse.next({
     request: { headers: requestHeaders },
   });
@@ -72,6 +73,20 @@ export async function middleware(req: NextRequest) {
 
   if (isStaff && role === "PATIENT") {
     return NextResponse.redirect(new URL(`/${locale}/patient`, req.url));
+  }
+
+  if (isStaff && role !== "ADMIN" && role !== "CLINICIAN") {
+    return NextResponse.redirect(new URL(`/${locale}/login`, req.url));
+  }
+
+  if (
+    isPatient &&
+    Boolean(token?.forcePasswordChange) &&
+    !pathname.includes("/patient/change-password")
+  ) {
+    return NextResponse.redirect(
+      new URL(`/${locale}/patient/change-password`, req.url)
+    );
   }
 
   return pass();

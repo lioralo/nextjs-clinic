@@ -27,6 +27,13 @@ export default async function PortalLayout({
   const portal = await getPortalPatient(user.id);
   if (!portal) redirect(`/${locale}/login`);
 
+  const { headers } = await import("next/headers");
+  const pathname = (await headers()).get("x-pathname") ?? "";
+  const onChangePassword = pathname.includes("/patient/change-password");
+  if (portal.user.forcePasswordChange && !onChangePassword) {
+    redirect(`/${locale}/patient/change-password`);
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-[var(--color-background)] text-[var(--color-foreground)]">
       <SkipLink locale={locale} />

@@ -210,8 +210,8 @@ export async function grantPortalAction(
   });
   const params = new URLSearchParams();
   if (result.ok) {
-    params.set("portalUser", result.username);
-    params.set("tempPassword", result.tempPassword);
+    const { stashPortalGrant } = await import("@/lib/portal-grant-flash");
+    params.set("portalGrant", stashPortalGrant(result.username, result.tempPassword));
   } else {
     params.set("portalError", result.error);
   }

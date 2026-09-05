@@ -10,6 +10,7 @@ import {
 } from "@/lib/messaging-service";
 import { getPrimaryStaffUser } from "@/lib/messaging-service";
 import { revalidateClinic } from "@/lib/revalidate";
+import { getPortalPatient } from "@/lib/portal-service";
 import { getSessionUser } from "@/lib/session";
 
 export async function changePasswordAction(locale: string, formData: FormData) {
@@ -31,6 +32,11 @@ export async function sendPatientMessageAction(
   const loc = normalizeLocale(locale) ?? "he";
   const user = await getSessionUser();
   if (!user || user.role !== "PATIENT") redirect(`/${loc}/login`);
+  const portal = await getPortalPatient(user.id);
+  if (!portal) redirect(`/${loc}/login`);
+  if (portal.user.forcePasswordChange) {
+    redirect(`/${loc}/patient/change-password`);
+  }
   const staff = await getPrimaryStaffUser();
   if (staff) {
     await sendMessage({
@@ -47,6 +53,11 @@ export async function markPortalNotificationsReadAction(locale: string) {
   const loc = normalizeLocale(locale) ?? "he";
   const user = await getSessionUser();
   if (!user || user.role !== "PATIENT") redirect(`/${loc}/login`);
+  const portal = await getPortalPatient(user.id);
+  if (!portal) redirect(`/${loc}/login`);
+  if (portal.user.forcePasswordChange) {
+    redirect(`/${loc}/patient/change-password`);
+  }
   await markNotificationsRead(user.id);
   revalidateClinic();
   redirect(`/${loc}/patient`);

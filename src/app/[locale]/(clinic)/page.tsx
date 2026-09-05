@@ -1,4 +1,5 @@
 import { sendDueAppointmentReminders } from "@/lib/cancel-service";
+import { smtpConfigured } from "@/lib/mail";
 import { countPendingCancelRequests } from "@/lib/cancel-service";
 import { t } from "@/lib/copy";
 import { formatDateTime } from "@/lib/datetime";
@@ -12,7 +13,9 @@ export default async function DashboardPage({
 }) {
   const resolvedParams = await params;
   const locale = resolvedParams.locale;
-  await sendDueAppointmentReminders();
+  if (smtpConfigured()) {
+    await sendDueAppointmentReminders();
+  }
 
   const start = new Date();
   start.setHours(0, 0, 0, 0);

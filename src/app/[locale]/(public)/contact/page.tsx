@@ -33,7 +33,9 @@ export default async function ContactPage({
         <p className="mb-4 text-[var(--color-primary-dark)]" role="alert">
           {query.error === "contact"
             ? t(locale, "Email or phone is required.", "נדרש אימייל או טלפון.")
-            : t(locale, "Name and message are required.", "נדרשים שם והודעה.")}
+            : query.error === "rate"
+              ? t(locale, "Too many messages. Please wait a minute.", "נשלחו יותר מדי הודעות. נסו שוב בעוד דקה.")
+              : t(locale, "Name and message are required.", "נדרשים שם והודעה.")}
         </p>
       ) : null}
       <form
@@ -85,6 +87,17 @@ export default async function ContactPage({
             className="min-h-28 rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2 outline-none"
           />
         </label>
+        <div className="hidden" aria-hidden="true">
+          <label htmlFor="contact-website">
+            {t(locale, "Website", "אתר")}
+            <input
+              id="contact-website"
+              name="website"
+              tabIndex={-1}
+              autoComplete="off"
+            />
+          </label>
+        </div>
         <button
           type="submit"
           data-testid="contact-submit"

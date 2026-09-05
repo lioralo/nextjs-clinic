@@ -358,8 +358,32 @@ export async function listPatientAppointments(
   const start = new Date(from);
   start.setMonth(start.getMonth() - 1);
   const end = addWeeks(from, weeksAhead);
-  const occurrences = await listAppointmentsInRange(start, end);
-  return occurrences
+  const rows = await prisma.appointment.findMany({
+    where: {
+      patientId,
+      kind: "APPOINTMENT",
+      status: { not: "CANCELLED" },
+      OR: [
+        {
+          isRecurring: false,
+          startAt: { lt: end },
+          endAt: { gt: start },
+        },
+        {
+          isRecurring: true,
+          startAt: { lt: end },
+          OR: [
+            { recurrenceEndDate: null },
+            { recurrenceEndDate: { gte: start } },
+          ],
+        },
+      ],
+    },
+    include: appointmentInclude,
+    orderBy: { startAt: "asc" },
+  });
+  return rows
+    .flatMap((row) => expandRecurringForRange(toRecord(row), start, end))
     .filter(
       (occurrence) =>
         occurrence.patientId === patientId && occurrence.kind === "APPOINTMENT"
@@ -508,12 +532,6 @@ export async function occupyVacancy(data: {
     return { ok: false as const, error: "conflict" };
   }
 
-  if (vacancy.isRecurring) {
-    await skipOccurrence(vacancy.id, occurrenceStart);
-  } else {
-    await prisma.appointment.delete({ where: { id: vacancy.id } });
-  }
-
   const created = await createAppointment({
     patientId: data.patientId,
     providerId: data.providerId,
@@ -524,6 +542,17 @@ export async function occupyVacancy(data: {
     meetingLink: data.meetingLink,
     isRecurring: Boolean(data.isRecurring),
   });
+
+  try {
+    if (vacancy.isRecurring) {
+      await skipOccurrence(vacancy.id, occurrenceStart);
+    } else {
+      await prisma.appointment.delete({ where: { id: vacancy.id } });
+    }
+  } catch (error) {
+    await prisma.appointment.delete({ where: { id: created.id } }).catch(() => undefined);
+    throw error;
+  }
 
   return { ok: true as const, id: created.id };
 }

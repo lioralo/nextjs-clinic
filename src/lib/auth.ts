@@ -55,6 +55,12 @@ export const authOptions: NextAuthOptions = {
         token.role = user.role;
         token.patientId = user.patientId ?? null;
         token.forcePasswordChange = Boolean(user.forcePasswordChange);
+      } else if (token.forcePasswordChange && typeof token.id === "string") {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.id },
+          select: { forcePasswordChange: true },
+        });
+        token.forcePasswordChange = Boolean(dbUser?.forcePasswordChange);
       }
       return token;
     },

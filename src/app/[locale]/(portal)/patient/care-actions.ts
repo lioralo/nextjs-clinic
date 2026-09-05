@@ -19,6 +19,9 @@ export async function takePortalAssessmentAction(
   if (!user || user.role !== "PATIENT") redirect(`/${loc}/login`);
   const portal = await getPortalPatient(user.id);
   if (!portal) redirect(`/${loc}/login`);
+  if (portal.user.forcePasswordChange) {
+    redirect(`/${loc}/patient/change-password`);
+  }
   const typeKey = String(formData.get("typeKey") ?? "");
   const answers = await readAssessmentAnswersFromForm(formData, typeKey);
   await takeAssessment({

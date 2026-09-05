@@ -280,6 +280,7 @@ model Notification {
   createdAt       DateTime             @default(now())
 
   recipient User @relation(fields: [recipientUserId], references: [id], onDelete: Cascade)
+  @@index([recipientUserId, createdAt])
 }
 
 model TherapyGroup {
@@ -319,6 +320,7 @@ model GroupSession {
 
   group      TherapyGroup       @relation(fields: [groupId], references: [id], onDelete: Cascade)
   attendance GroupAttendance[]
+  @@index([groupId, startAt])
 }
 
 model GroupAttendance {
@@ -389,6 +391,7 @@ model TreatmentPlan {
 
   patient Patient             @relation(fields: [patientId], references: [id], onDelete: Cascade)
   goals   TreatmentPlanGoal[]
+  @@index([patientId, status])
 }
 
 model TreatmentPlanGoal {
@@ -451,4 +454,5 @@ model ContactInquiry {
   message   String
   readAt    DateTime?
   createdAt DateTime  @default(now())
+  @@index([createdAt])
 }

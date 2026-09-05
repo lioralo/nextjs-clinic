@@ -123,6 +123,7 @@ export async function bookPublicVacancy(input: {
     isRecurring: false,
   });
   if (!occupied.ok) {
+    await prisma.patient.delete({ where: { id: patient.id } }).catch(() => undefined);
     return occupied;
   }
 
