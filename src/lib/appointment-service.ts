@@ -532,6 +532,12 @@ export async function occupyVacancy(data: {
     return { ok: false as const, error: "conflict" };
   }
 
+  if (vacancy.isRecurring) {
+    await skipOccurrence(vacancy.id, occurrenceStart);
+  } else {
+    await prisma.appointment.delete({ where: { id: vacancy.id } });
+  }
+
   const created = await createAppointment({
     patientId: data.patientId,
     providerId: data.providerId,
@@ -542,17 +548,6 @@ export async function occupyVacancy(data: {
     meetingLink: data.meetingLink,
     isRecurring: Boolean(data.isRecurring),
   });
-
-  try {
-    if (vacancy.isRecurring) {
-      await skipOccurrence(vacancy.id, occurrenceStart);
-    } else {
-      await prisma.appointment.delete({ where: { id: vacancy.id } });
-    }
-  } catch (error) {
-    await prisma.appointment.delete({ where: { id: created.id } }).catch(() => undefined);
-    throw error;
-  }
 
   return { ok: true as const, id: created.id };
 }
