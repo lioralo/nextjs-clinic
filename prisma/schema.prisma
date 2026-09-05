@@ -151,6 +151,9 @@ model Patient {
   assignedResources PatientResource[]
   treatmentPlans    TreatmentPlan[]
   assessments       Assessment[]
+
+  @@index([status])
+  @@index([lastName, firstName])
 }
 
 model Appointment {
@@ -181,6 +184,10 @@ model Appointment {
   provider       User                  @relation("ProviderAppointments", fields: [providerId], references: [id])
   exceptions     RecurrenceException[]
   cancelRequests CancelRequest[]
+
+  @@index([startAt, status])
+  @@index([patientId, startAt])
+  @@index([providerId, startAt])
 }
 
 model RecurrenceException {
@@ -226,6 +233,8 @@ model Note {
 
   patient Patient @relation(fields: [patientId], references: [id])
   author  User    @relation("NoteAuthors", fields: [authorId], references: [id])
+
+  @@index([patientId, createdAt])
 }
 
 model CancelRequest {
@@ -242,6 +251,8 @@ model CancelRequest {
   appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
   patient     Patient     @relation(fields: [patientId], references: [id], onDelete: Cascade)
   reviewedBy  User?       @relation("CancelReviewer", fields: [reviewedById], references: [id])
+
+  @@index([status, createdAt])
 }
 
 model Message {
@@ -254,6 +265,9 @@ model Message {
 
   sender    User @relation("MessageSender", fields: [senderId], references: [id])
   recipient User @relation("MessageRecipient", fields: [recipientId], references: [id])
+
+  @@index([recipientId, createdAt])
+  @@index([senderId, createdAt])
 }
 
 model Notification {
@@ -266,6 +280,7 @@ model Notification {
   createdAt       DateTime             @default(now())
 
   recipient User @relation(fields: [recipientUserId], references: [id], onDelete: Cascade)
+  @@index([recipientUserId, createdAt])
 }
 
 model TherapyGroup {
@@ -305,6 +320,7 @@ model GroupSession {
 
   group      TherapyGroup       @relation(fields: [groupId], references: [id], onDelete: Cascade)
   attendance GroupAttendance[]
+  @@index([groupId, startAt])
 }
 
 model GroupAttendance {
@@ -375,6 +391,7 @@ model TreatmentPlan {
 
   patient Patient             @relation(fields: [patientId], references: [id], onDelete: Cascade)
   goals   TreatmentPlanGoal[]
+  @@index([patientId, status])
 }
 
 model TreatmentPlanGoal {
@@ -425,6 +442,8 @@ model Assessment {
   patient Patient        @relation(fields: [patientId], references: [id], onDelete: Cascade)
   type    AssessmentType @relation(fields: [typeId], references: [id])
   takenBy User           @relation(fields: [takenById], references: [id])
+
+  @@index([patientId, takenAt])
 }
 
 model ContactInquiry {
@@ -435,4 +454,5 @@ model ContactInquiry {
   message   String
   readAt    DateTime?
   createdAt DateTime  @default(now())
+  @@index([createdAt])
 }

@@ -217,7 +217,7 @@ export async function sendDueAppointmentReminders(now = new Date()) {
       subject: "Appointment reminder",
       text: `Reminder: you have a meeting at ${appointment.startAt.toISOString()}.`,
     });
-    if (result.ok) {
+    if (result.ok && !result.skipped) {
       await prisma.appointment.update({
         where: { id: appointment.id },
         data: { reminderSentAt: new Date() },

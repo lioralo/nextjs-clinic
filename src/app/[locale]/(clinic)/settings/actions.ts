@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 
 import { normalizeLocale } from "@/lib/locale";
-import { getSessionUser } from "@/lib/session";
+import { getSessionUser, isStaffRole } from "@/lib/session";
 import {
   beginTotpSetup,
   confirmTotpSetup,
@@ -33,6 +33,6 @@ export async function confirmTotpSetupAction(
 export async function disableTotpAction(locale: string) {
   const { loc, user } = await requireUser(locale);
   await disableTotp(user.id);
-  if (user.role === "PATIENT") redirect(`/${loc}/patient/security`);
+  if (!isStaffRole(user.role)) redirect(`/${loc}/patient/security`);
   redirect(`/${loc}/settings`);
 }

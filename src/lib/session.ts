@@ -5,9 +5,11 @@ dotenv.config();
 import { cookies } from "next/headers";
 import { getServerSession } from "next-auth";
 import { getToken } from "next-auth/jwt";
+import { redirect } from "next/navigation";
 import type { NextRequest } from "next/server";
 
 import { authOptions } from "./auth";
+import { normalizeLocale, type AppLocale } from "./locale";
 
 export type SessionUser = {
   id: string;
@@ -16,6 +18,23 @@ export type SessionUser = {
   patientId?: string | null;
   forcePasswordChange?: boolean;
 };
+
+export function isStaffRole(role: string | undefined | null): boolean {
+  return role === "ADMIN" || role === "CLINICIAN";
+}
+
+/** Staff-only guard for clinic server actions. Redirects patients/guests to login. */
+export async function requireStaffUser(locale: string): Promise<{
+  loc: AppLocale;
+  user: SessionUser;
+}> {
+  const loc = normalizeLocale(locale) ?? "he";
+  const user = await getSessionUser();
+  if (!user || !isStaffRole(user.role)) {
+    redirect(`/${loc}/login`);
+  }
+  return { loc, user };
+}
 
 function userFromToken(token: {
   id?: unknown;

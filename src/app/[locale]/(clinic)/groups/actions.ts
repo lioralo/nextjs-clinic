@@ -10,21 +10,11 @@ import {
   removeGroupMember,
   setAttendance,
 } from "@/lib/group-service";
-import { normalizeLocale } from "@/lib/locale";
 import { revalidateClinic } from "@/lib/revalidate";
-import { getSessionUser } from "@/lib/session";
-
-function requireStaff(locale: string) {
-  return async () => {
-    const loc = normalizeLocale(locale) ?? "he";
-    const user = await getSessionUser();
-    if (!user || user.role === "PATIENT") redirect(`/${loc}/login`);
-    return { loc, user };
-  };
-}
+import { requireStaffUser } from "@/lib/session";
 
 export async function createGroupAction(locale: string, formData: FormData) {
-  const { loc } = await requireStaff(locale)();
+  const { loc } = await requireStaffUser(locale);
   const result = await createGroup({
     name: String(formData.get("name") ?? ""),
     description: String(formData.get("description") ?? ""),
@@ -39,7 +29,7 @@ export async function addGroupMemberAction(
   groupId: string,
   formData: FormData
 ) {
-  const { loc } = await requireStaff(locale)();
+  const { loc } = await requireStaffUser(locale);
   await addGroupMember(groupId, String(formData.get("patientId") ?? ""));
   revalidateClinic();
   redirect(`/${loc}/groups/${groupId}`);
@@ -50,7 +40,7 @@ export async function removeGroupMemberAction(
   groupId: string,
   patientId: string
 ) {
-  const { loc } = await requireStaff(locale)();
+  const { loc } = await requireStaffUser(locale);
   await removeGroupMember(groupId, patientId);
   revalidateClinic();
   redirect(`/${loc}/groups/${groupId}`);
@@ -61,7 +51,7 @@ export async function createGroupSessionsAction(
   groupId: string,
   formData: FormData
 ) {
-  const { loc } = await requireStaff(locale)();
+  const { loc } = await requireStaffUser(locale);
   const startAt = parseDateInput(String(formData.get("startAt") ?? ""));
   const endAt = parseDateInput(String(formData.get("endAt") ?? ""));
   const weeks = Number(formData.get("weeks") ?? 1);
@@ -83,7 +73,7 @@ export async function setAttendanceAction(
   patientId: string,
   formData: FormData
 ) {
-  const { loc } = await requireStaff(locale)();
+  const { loc } = await requireStaffUser(locale);
   const status = String(formData.get("status") ?? "PENDING");
   if (status === "PENDING" || status === "PRESENT" || status === "MISSED") {
     await setAttendance(sessionId, patientId, status);

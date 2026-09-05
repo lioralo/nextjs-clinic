@@ -43,4 +43,38 @@ describe("contact inquiry", () => {
       expect.objectContaining({ category: "CONTACT" })
     );
   });
+
+  it("silently accepts honeypot submissions", async () => {
+    await expect(
+      submitContactInquiry({
+        name: "Bot",
+        email: "bot@example.com",
+        message: "spam",
+        website: "https://spam.test",
+      })
+    ).resolves.toEqual({ ok: true, honeypot: true });
+    expect(mocks.create).not.toHaveBeenCalled();
+  });
+
+  it("rate-limits repeated contact submissions", async () => {
+    const key = `contact-${Date.now()}`;
+    for (let i = 0; i < 5; i += 1) {
+      await expect(
+        submitContactInquiry({
+          name: "Ada",
+          email: "ada@example.com",
+          message: "Hello",
+          clientKey: key,
+        })
+      ).resolves.toMatchObject({ ok: true });
+    }
+    await expect(
+      submitContactInquiry({
+        name: "Ada",
+        email: "ada@example.com",
+        message: "Hello again",
+        clientKey: key,
+      })
+    ).resolves.toEqual({ ok: false, error: "rate" });
+  });
 });

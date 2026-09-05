@@ -2,23 +2,17 @@
 
 import { redirect } from "next/navigation";
 
-import { takeAssessment } from "@/lib/assessment-service";
-import { getCatalog } from "@/lib/assessment-catalog";
-import { normalizeLocale } from "@/lib/locale";
+import {
+  readAssessmentAnswersFromForm,
+  takeAssessment,
+} from "@/lib/assessment-service";
 import { revalidateClinic } from "@/lib/revalidate";
-import { getSessionUser } from "@/lib/session";
+import { requireStaffUser } from "@/lib/session";
 import {
   createTreatmentPlan,
   deleteTreatmentPlan,
   updateGoalProgress,
 } from "@/lib/treatment-plan-service";
-
-async function requireStaff(locale: string) {
-  const loc = normalizeLocale(locale) ?? "he";
-  const user = await getSessionUser();
-  if (!user || user.role === "PATIENT") redirect(`/${loc}/login`);
-  return { loc, user };
-}
 
 function carePath(loc: string, patientId: string) {
   return `/${loc}/patients/${patientId}?section=care`;
@@ -42,7 +36,7 @@ export async function createPlanAction(
   patientId: string,
   formData: FormData
 ) {
-  const { loc } = await requireStaff(locale);
+  const { loc } = await requireStaffUser(locale);
   await createTreatmentPlan({
     patientId,
     diagnosisCode: String(formData.get("diagnosisCode") ?? ""),
@@ -65,7 +59,7 @@ export async function deletePlanAction(
   patientId: string,
   planId: string
 ) {
-  const { loc } = await requireStaff(locale);
+  const { loc } = await requireStaffUser(locale);
   await deleteTreatmentPlan(planId, patientId);
   redirect(carePath(loc, patientId));
 }
@@ -76,7 +70,7 @@ export async function updateGoalAction(
   goalId: string,
   formData: FormData
 ) {
-  const { loc } = await requireStaff(locale);
+  const { loc } = await requireStaffUser(locale);
   await updateGoalProgress({
     goalId,
     patientId,
@@ -91,12 +85,9 @@ export async function takeAssessmentAction(
   patientId: string,
   formData: FormData
 ) {
-  const { loc, user } = await requireStaff(locale);
+  const { loc, user } = await requireStaffUser(locale);
   const typeKey = String(formData.get("typeKey") ?? "");
-  const catalog = getCatalog(typeKey);
-  const answers = (catalog?.questions ?? []).map((_, index) =>
-    Number(formData.get(`q_${index}`))
-  );
+  const answers = await readAssessmentAnswersFromForm(formData, typeKey);
   await takeAssessment({
     patientId,
     typeKey,

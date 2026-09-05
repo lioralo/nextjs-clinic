@@ -78,13 +78,27 @@ Screenshots, video, HTML report, GitHub Actions on `main` and PRs (migrate, seed
 2. **PHQ-9 e2e** — A controlled `<select value={...}>` can ignore Playwright `selectOption`. Use `defaultValue` + `onChange`, wait for `input[name="q_8"]` (nine items, 0-based), then fill.
 3. **Portal assign / cancel e2e** — Open the dialog first (`open-assign-resource`, then `assign-resource`; `approve-cancel` then confirm in `approve-cancel-dialog`). Calendar events may sit on the next week; click `.fc-next-button` if needed.
 
+## Health pass (PR 13) — auth, booking, reminders, indexes
+
+Pulled latest `main` and verified docs/scripts against the running app. Layout and local runner were already solid; this drop hardens leftover correctness and efficiency gaps:
+
+- Portal **force password change** enforced in layout, middleware, and portal actions (not only the home page)
+- Staff routes reject unknown roles (`isStaffRole`), not merely “not PATIENT”
+- Appointment reminders are **not** marked sent when SMTP is skipped; dashboard only runs the sender when SMTP is configured
+- Public booking deletes orphan waiting patients if vacancy occupy fails; occupy creates the visit before removing the vacancy
+- `listPatientAppointments` queries by `patientId` instead of expanding the whole clinic calendar
+- Contact form honeypot + rate limit; auth preflight rate limit
+- Portal temp password shown via short-lived grant token (not raw password in the URL)
+- Extra Prisma indexes on notifications, group sessions, treatment plans, contact inquiries
+
+Verification on this branch: `npm test` (77), `npm run lint` (0 errors), `npm run build`, `/he/login` + `/he/contact` HTTP 200.
+
 ## Still open (not in this merge)
 
 | PR | Intent |
 |----|--------|
-| [#9](https://github.com/lioralo/nextjs-clinic/pull/9) | Narrow-viewport clinic UI + extra testing/debug docs |
-| [#10](https://github.com/lioralo/nextjs-clinic/pull/10) | `npm run local` from Windows `cmd` (Node runner, no bash) |
 | [#11](https://github.com/lioralo/nextjs-clinic/pull/11) | Seed **resets** admin/portal passwords; visible login errors |
+| [#13](https://github.com/lioralo/nextjs-clinic/pull/13) | This health / auth hardening branch (draft) |
 
 Until #11 lands, `npm run db:seed` **does not** change an existing admin password. If login fails locally, delete the user row or hash a new password in SQLite.
 

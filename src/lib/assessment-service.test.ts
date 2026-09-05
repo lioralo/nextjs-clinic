@@ -16,3 +16,13 @@ describe("assessment scoring", () => {
     expect(scoreAnswers("GAD-7", [0, 1])).toEqual({ ok: false, error: "answers" });
   });
 });
+
+describe("isStaffRole", () => {
+  it("accepts clinic roles only", async () => {
+    const { isStaffRole } = await import("./session");
+    expect(isStaffRole("ADMIN")).toBe(true);
+    expect(isStaffRole("CLINICIAN")).toBe(true);
+    expect(isStaffRole("PATIENT")).toBe(false);
+    expect(isStaffRole(undefined)).toBe(false);
+  });
+});

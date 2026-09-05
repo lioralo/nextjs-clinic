@@ -36,14 +36,19 @@ export default async function PatientDetailPage({
   searchParams: Promise<{
     section?: string;
     editNote?: string;
+    portalGrant?: string;
     portalUser?: string;
     tempPassword?: string;
     portalError?: string;
   }>;
 }) {
   const { locale, id } = await params;
-  const { section, editNote, portalUser, tempPassword, portalError } =
+  const { section, editNote, portalGrant, portalUser, tempPassword, portalError } =
     await searchParams;
+  const { consumePortalGrant } = await import("@/lib/portal-grant-flash");
+  const grant = consumePortalGrant(portalGrant);
+  const resolvedPortalUser = grant?.username ?? portalUser;
+  const resolvedTempPassword = grant?.tempPassword ?? tempPassword;
   const activeSection =
     section === "logs" ? "logs" : section === "care" ? "care" : "info";
 
@@ -161,8 +166,8 @@ export default async function PatientDetailPage({
               title: resource.title,
             }))}
             assignedResourceIds={assigned.map((row) => row.resourceId)}
-            portalUser={portalUser}
-            tempPassword={tempPassword}
+            portalUser={resolvedPortalUser}
+            tempPassword={resolvedTempPassword}
             portalError={portalError}
           />
           <section

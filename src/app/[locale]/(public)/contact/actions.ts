@@ -12,6 +12,8 @@ export async function submitContactAction(locale: string, formData: FormData) {
     email: String(formData.get("email") ?? ""),
     phone: String(formData.get("phone") ?? ""),
     message: String(formData.get("message") ?? ""),
+    website: String(formData.get("website") ?? ""),
+    clientKey: String(formData.get("email") ?? formData.get("phone") ?? "anon"),
   });
   if (!result.ok) {
     redirect(`/${loc}/contact?error=${result.error}`);

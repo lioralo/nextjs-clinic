@@ -37,11 +37,30 @@ function localInput(date: Date) {
 }
 
 function slotOn(dayOffset: number, hour: number) {
+  // Future wall-clock slot. On weekends this often lands in the *next*
+  // FullCalendar week — use expectEventOnGrid() to reveal it.
   const start = new Date();
   start.setDate(start.getDate() + dayOffset);
   start.setHours(hour, 0, 0, 0);
+  if (start.getTime() <= Date.now()) {
+    start.setDate(start.getDate() + 7);
+  }
   const end = new Date(start.getTime() + 60 * 60 * 1000);
   return { start, end };
+}
+
+async function expectEventOnGrid(page: Page, title: string) {
+  const event = page.locator(".fc-event").filter({ hasText: title }).first();
+  for (let attempt = 0; attempt < 4; attempt++) {
+    if (await event.isVisible().catch(() => false)) {
+      await expect(event).toBeVisible();
+      return event;
+    }
+    await page.locator(".fc-next-button").click();
+    await page.waitForTimeout(250);
+  }
+  await expect(event).toBeVisible({ timeout: 10_000 });
+  return event;
 }
 
 async function setDraftTimes(page: Page, start: Date, end: Date) {
@@ -114,29 +133,21 @@ test("overlapping vacancy is rejected and a vacancy can be occupied", async ({
   const slot = slotOn(1, 10);
   await fillVacancyDraft(page, "E2E Vacancy Occupy", slot);
   await page.getByTestId("create-booking").click();
-  await expect(
-    page.locator(".fc-event").filter({ hasText: "E2E Vacancy Occupy" })
-  ).toBeVisible({
-    timeout: 10_000,
-  });
+  await expectEventOnGrid(page, "E2E Vacancy Occupy");
 
   await fillVacancyDraft(page, "E2E Vacancy Occupy", slot);
   await page.getByTestId("create-booking").click();
   await expect(page.getByTestId("calendar-error")).toBeVisible();
 
   await closeBookingPanel(page);
-  await page
-    .locator(".fc-event")
-    .filter({ hasText: "E2E Vacancy Occupy" })
-    .click();
+  const vacancy = await expectEventOnGrid(page, "E2E Vacancy Occupy");
+  await vacancy.click();
   await expect(page.getByTestId("occupy-vacancy")).toBeVisible();
   await page.getByTestId("occupy-vacancy").click();
   await expect(page.getByTestId("occupy-vacancy")).toHaveCount(0, {
     timeout: 10_000,
   });
-  await expect(
-    page.locator(".fc-event").filter({ hasText: "Test Patient" }).first()
-  ).toBeVisible();
+  await expectEventOnGrid(page, "Test Patient");
 });
 
 test("deleting this occurrence leaves the rest of the series", async ({
@@ -152,27 +163,18 @@ test("deleting this occurrence leaves the rest of the series", async ({
   await page.getByRole("checkbox", { name: /חוזר שבועית/ }).check();
   await setDraftTimes(page, slot.start, slot.end);
   await page.getByTestId("create-booking").click();
-  await expect(
-    page.locator(".fc-event").filter({ hasText: "Test Patient" }).first()
-  ).toBeVisible({
-    timeout: 10_000,
-  });
+  await expectEventOnGrid(page, "Test Patient");
 
-  await page
-    .locator(".fc-event")
-    .filter({ hasText: "Test Patient" })
-    .first()
-    .click();
+  const occurrence = await expectEventOnGrid(page, "Test Patient");
+  await occurrence.click();
   page.once("dialog", (dialog) => dialog.accept());
   await page.getByTestId("delete-this-occurrence").click();
   await expect(page.getByTestId("delete-this-occurrence")).toHaveCount(0, {
     timeout: 10_000,
   });
 
-  await page.locator(".fc-next-button").click();
-  await expect(
-    page.locator(".fc-event").filter({ hasText: "Test Patient" }).first()
-  ).toBeVisible();
+  // Later weekly occurrences are on following weeks.
+  await expectEventOnGrid(page, "Test Patient");
 });
 
 test("publishing vacant slots shows them on the week grid", async ({
@@ -214,9 +216,7 @@ test("patient meetings open the focused calendar", async ({ page }) => {
   await openBookingPanel(page);
   await setDraftTimes(page, slot.start, slot.end);
   await page.getByTestId("create-booking").click();
-  await expect(
-    page.locator(".fc-event").filter({ hasText: "Test Patient" }).first()
-  ).toBeVisible({ timeout: 10_000 });
+  await expectEventOnGrid(page, "Test Patient");
 
   await page.goto("/he/patients");
   await page.getByTestId("crm-status-ongoing").click();
@@ -241,11 +241,7 @@ test("guest can book a public vacancy without logging in", async ({
   const slot = slotOn(1, 16);
   await fillVacancyDraft(page, "E2E Public Slot", slot);
   await page.getByTestId("create-booking").click();
-  await expect(
-    page.locator(".fc-event").filter({ hasText: "E2E Public Slot" })
-  ).toBeVisible({
-    timeout: 10_000,
-  });
+  await expectEventOnGrid(page, "E2E Public Slot");
 
   await page.getByTestId("copy-public-booking-link").click();
   const form = page.getByTestId("publish-vacancies-form");

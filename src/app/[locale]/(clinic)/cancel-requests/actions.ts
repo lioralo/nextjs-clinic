@@ -8,20 +8,16 @@ import {
   requestCancel,
 } from "@/lib/cancel-service";
 import { normalizeLocale } from "@/lib/locale";
-import { getSessionUser } from "@/lib/session";
+import { getSessionUser, requireStaffUser } from "@/lib/session";
 
 export async function approveCancelAction(locale: string, requestId: string) {
-  const loc = normalizeLocale(locale) ?? "he";
-  const user = await getSessionUser();
-  if (!user || user.role === "PATIENT") redirect(`/${loc}/login`);
+  const { loc, user } = await requireStaffUser(locale);
   await approveCancelRequest(requestId, user.id);
   redirect(`/${loc}/cancel-requests`);
 }
 
 export async function rejectCancelAction(locale: string, requestId: string) {
-  const loc = normalizeLocale(locale) ?? "he";
-  const user = await getSessionUser();
-  if (!user || user.role === "PATIENT") redirect(`/${loc}/login`);
+  const { loc, user } = await requireStaffUser(locale);
   await rejectCancelRequest(requestId, user.id);
   redirect(`/${loc}/cancel-requests`);
 }
